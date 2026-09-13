@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <!-- 1. El pilar indispensable: Viewport -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SkyOps - Framework7 Style</title>
+
+    <!-- CSS de Framework7 (Estilos nativos iOS / Material) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/framework7@8.3.3/framework7-bundle.min.css">
+    
+    <!-- Tailwind CSS (Para utilidades rápidas de layout) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- React & Babel -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- AG Grid JS Vanilla -->
+    <script src="https://unpkg.com/ag-grid-community/dist/ag-grid-community.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/ag-grid-community/styles/ag-grid.css">
+    <link rel="stylesheet" href="https://unpkg.com/ag-grid-community/styles/ag-theme-alpine.css">
+</head>
+<body class="h-full bg-slate-100 text-slate-800">
+    <div id="root" class="h-full"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // Componente Contenedor AG Grid
+        function GridView({ rowData, quickFilterText, sidebarColapsado, onEditar, onEliminar }) {
+            const gridRef = useRef(null);
+            const gridApiRef = useRef(null);
+
+            useEffect(() => {
+                if (!gridRef.current) return;
+
+                const columnDefs = [
+                    { 
+                        headerName: 'Código', 
+                        field: 'codigo', 
+                        sortable: true, 
+                        filter: true,
+                        width: 100,
+                        cellRenderer: (params) => `<span class="badge color-blue">${params.value}</span>`
+                    },
+                    { headerName: 'Nombre del Aeropuerto', field: 'nombre', sortable: true, filter: true, flex: 2, minWidth: 180 },
+                    { headerName: 'Ciudad', field: 'ciudad', sortable: true, filter: true, flex: 1, minWidth: 120 },
+                    { 
+                        headerName: 'Acciones', 
+                        sortable: false, 
+                        filter: false,
+                        width: 110,
+                        cellRenderer: (params) => `
+                            <div class="flex items-center justify-end gap-2 h-full">
+                                <button data-action="edit" class="button button-small button-outline color-blue">✏️</button>
+                                <button data-action="delete" class="button button-small button-outline color-red">🗑️</button>
+                            </div>
+                        `
+                    }
+                ];
+
+                const gridOptions = {
+                    columnDefs: columnDefs,
+                    rowData: rowData,
+                    pagination: true,
+                    paginationPageSize: 10,
+                    animateRows: true,
+                    onCellClicked: (params) => {
+                        const target = params.event.target.closest('button');
+                        if (!target) return;
+                        const action = target.getAttribute('data-action');
+                        if (action === 'edit') onEditar(params.data);
+                        if (action === 'delete') onEliminar(params.data.codigo);
+                    }
+                };
+
+                gridApiRef.current = agGrid.createGrid(gridRef.current, gridOptions);
+
+                return () => {
+                    if (gridApiRef.current) gridApiRef.current.destroy();
+                };
+            }, []);
+
+            useEffect(() => {
+                setTimeout(() => {
+                    if (gridApiRef.current) gridApiRef.current.sizeColumnsToFit();
+                }, 300);
+            }, [sidebarColapsado]);
+
+            useEffect(() => {
+                if (gridApiRef.current) gridApiRef.current.setGridOption('rowData', rowData);
+            }, [rowData]);
+
+            useEffect(() => {
+                if (gridApiRef.current) gridApiRef.current.setGridOption('quickFilterText', quickFilterText);
+            }, [quickFilterText]);
+
+            return <div ref={gridRef} className="ag-theme-alpine w-full h-full rounded-xl shadow-sm border border-slate-200"></div>;
+        }
+
+        function App() {
+            const [sidebarColapsado, setSidebarColapsado] = useState(false);
+            const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
+
+            const [aeropuertos, setAeropuertos] = useState([
+                { codigo: 'JFK', nombre: 'John F. Kennedy Intl', ciudad: 'New York', activo: true },
+                { codigo: 'MEX', nombre: 'Aeropuerto Intl CDMX', ciudad: 'Ciudad de México', activo: true },
+                { codigo: 'MAD', nombre: 'Adolfo Suárez Barajas', ciudad: 'Madrid', activo: false }
+            ]);
+            
+            const [busqueda, setBusqueda] = useState('');
+            const [modalAbierto, setModalAbierto] = useState(false);
+            const [modoEdicion, setModoEdicion] = useState(false);
+            const [formData, setFormData] = useState({ codigo: '', nombre: '', ciudad: '', activo: true });
+
+            useEffect(() => {
+                if (window.lucide) window.lucide.createIcons();
+            }, [sidebarColapsado, menuMovilAbierto, modalAbierto]);
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (modoEdicion) {
+                    setAeropuertos(aeropuertos.map(a => a.codigo === formData.codigo ? formData : a));
+                } else {
+                    setAeropuertos([...aeropuertos, { ...formData, codigo: formData.codigo.toUpperCase() }]);
+                }
+                setModalAbierto(false);
+            };
+
+            const handleEliminar = (codigo) => {
+                if (confirm(`¿Eliminar aeropuerto ${codigo}?`)) {
+                    setAeropuertos(aeropuertos.filter(a => a.codigo !== codigo));
+                }
+            };
+
+            return (
+                <div className="h-screen flex flex-col md:flex-row bg-slate-100 overflow-hidden">
+
+                    {/* BACKDROP CELULAR */}
+                    {menuMovilAbierto && (
+                        <div onClick={() => setMenuMovilAbierto(false)} className="fixed inset-0 bg-slate-900/60 z-40 md:hidden"></div>
+                    )}
+
+                    {/* MENÚ LATERAL CON ESTILO NATIVO */}
+                    <aside className={`
+                        fixed md:static inset-y-0 left-0 z-50 bg-slate-900 text-slate-300 flex flex-col transition-all duration-300
+                        ${sidebarColapsado ? 'md:w-20' : 'md:w-64'}
+                        ${menuMovilAbierto ? 'translate-x-0 w-64' : '-translate-x-full md:translate-x-0'}
+                    `}>
+                        <div className="h-16 px-4 border-b border-slate-800 flex items-center justify-between">
+                            <span className="font-bold text-white flex items-center gap-2">
+                                <i data-lucide="plane-takeoff" className="text-sky-400"></i>
+                                {!sidebarColapsado && "SkyOps F7"}
+                            </span>
+                            <button onClick={() => setSidebarColapsado(!sidebarColapsado)} className="hidden md:block text-slate-400 hover:text-white">
+                                <i data-lucide={sidebarColapsado ? "chevron-right" : "chevron-left"}></i>
+                            </button>
+                        </div>
+
+                        {/* Lista de Navegación estilo Framework7 */}
+                        <div className="list no-hairlines-between p-2">
+                            <ul>
+                                <li>
+                                    <a href="#" className="item-link item-content bg-sky-600 rounded-lg text-white">
+                                        <div className="item-media"><i data-lucide="building-2"></i></div>
+                                        {!sidebarColapsado && <div className="item-inner"><div className="item-title">Aeropuertos</div></div>}
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </aside>
+
+                    {/* CONTENIDO PRINCIPAL CON BARRA DE NAVEGACIÓN TIPO iOS/MATERIAL */}
+                    <div className="flex-1 flex flex-col h-full overflow-hidden">
+                        
+                        {/* NAVBAR CON CLASES FRAMEWORK7 */}
+                        <div className="navbar bg-white border-b border-slate-200 px-4 flex justify-between items-center h-16 shrink-0">
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => setMenuMovilAbierto(true)} className="md:hidden button button-small">
+                                    <i data-lucide="menu"></i>
+                                </button>
+                                <div className="title font-bold text-lg text-slate-800">Mantenimiento de Aeropuertos</div>
+                            </div>
+                            <button 
+                                onClick={() => {
+                                    setFormData({ codigo: '', nombre: '', ciudad: '', activo: true });
+                                    setModoEdicion(false);
+                                    setModalAbierto(true);
+                                }}
+                                className="button button-fill color-blue flex items-center gap-1"
+                            >
+                                <i data-lucide="plus" className="w-4 h-4"></i> Nuevo
+                            </button>
+                        </div>
+
+                        {/* CONTENIDO VISTA */}
+                        <main className="flex-1 p-4 flex flex-col min-h-0 overflow-hidden">
+                            
+                            {/* Buscador nativo con clases F7 */}
+                            <div className="searchbar searchbar-inline mb-4 shrink-0">
+                                <div className="searchbar-input-wrap">
+                                    <input 
+                                        type="search" 
+                                        placeholder="Buscar con filtro rápido..." 
+                                        value={busqueda}
+                                        onChange={(e) => setBusqueda(e.target.value)}
+                                        className="bg-white border border-slate-300 rounded-lg px-3 py-2 w-full text-sm outline-none"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* AG Grid Adaptativo */}
+                            <div className="flex-1 min-h-0 w-full">
+                                <GridView 
+                                    rowData={aeropuertos} 
+                                    quickFilterText={busqueda} 
+                                    sidebarColapsado={sidebarColapsado}
+                                    onEditar={(item) => {
+                                        setFormData(item);
+                                        setModoEdicion(true);
+                                        setModalAbierto(true);
+                                    }}
+                                    onEliminar={handleEliminar}
+                                />
+                            </div>
+                        </main>
+                    </div>
+
+                    {/* POPUP / MODAL TIPO FRAMEWORK7 */}
+                    {modalAbierto && (
+                        <div className="popup popup-open fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center p-4 z-50">
+                            <div className="block bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+                                <div className="navbar bg-slate-50 border-b border-slate-200 px-4 py-3 flex justify-between items-center">
+                                    <div className="title font-bold text-slate-800">{modoEdicion ? 'Editar Aeropuerto' : 'Nuevo Aeropuerto'}</div>
+                                    <button onClick={() => setModalAbierto(false)} className="link text-slate-500 font-bold">Cerrar</button>
+                                </div>
+                                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                                    <div className="list no-hairlines-md space-y-3">
+                                        <div>
+                                            <div className="item-title item-label text-xs font-semibold text-slate-500">CÓDIGO IATA</div>
+                                            <input 
+                                                type="text" 
+                                                disabled={modoEdicion}
+                                                required 
+                                                maxLength="3"
+                                                value={formData.codigo} 
+                                                onChange={e => setFormData({...formData, codigo: e.target.value})}
+                                                className="border border-slate-300 rounded-lg p-2.5 w-full text-sm font-mono uppercase"
+                                            />
+                                        </div>
+                                        <div>
+                                            <div className="item-title item-label text-xs font-semibold text-slate-500">NOMBRE</div>
+                                            <input 
+                                                type="text" 
+                                                required 
+                                                value={formData.nombre} 
+                                                onChange={e => setFormData({...formData, nombre: e.target.value})}
+                                                className="border border-slate-300 rounded-lg p-2.5 w-full text-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="pt-4 flex justify-end gap-2">
+                                        <button type="button" onClick={() => setModalAbierto(false)} className="button button-outline color-gray">Cancelar</button>
+                                        <button type="submit" className="button button-fill color-blue">Guardar</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
