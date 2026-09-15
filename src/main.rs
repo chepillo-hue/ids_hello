@@ -1,46 +1,46 @@
-mod dtos;
-mod handlers;
-mod services;
-
-//use axum::{
-//    routing::{get, post},
-//    Router,
-//};
-use axum::{routing::get, Router};
-use sqlx::postgres::PgPoolOptions;
+use axum::{
+    routing::get,
+    Router,
+};
 use std::net::SocketAddr;
-use tower_http::services::ServeDir;
+use tower_http::services::{ServeDir, ServeFile};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let database_url = "postgres://postgres:mi_clave_secreta@localhost:5432/demo";
+async fn main() {
+    // 1. Rutas de la API
+    let api_routes = Router::new()
+        .route("/api/catalogos/perfumes", get(obtener_perfumes));
 
-    println!("Conectando a la base de datos PostgreSQL en Docker...");
-    let pool = PgPoolOptions::new()
-        .max_connections(10)
-        .connect(database_url)
-        .await?;
-
+    // 2. Servir 'static/index.html' en la raíz "/" y archivos estáticos
     let app = Router::new()
-        .route("/api/vuelos", get(handlers::aeropuerto::obtener_resumen_vuelos))
-        .route(
-            "/api/aeropuertos",
-            get(handlers::aeropuerto::listar).post(handlers::aeropuerto::crear),
-        )
-        .route(
-            "/api/aeropuertos/:codigo",
-            get(handlers::aeropuerto::obtener_por_codigo)
-                .put(handlers::aeropuerto::actualizar)
-                .delete(handlers::aeropuerto::eliminar),
-        )
-        .fallback_service(ServeDir::new("public"))
-        .with_state(pool);
+        .nest("", api_routes)
+        // Servir index.html cuando entren a "/"
+        .route_service("/", ServeFile::new("public/index.html")) 
+        // Servir cualquier otro archivo estático (CSS, JS, imágenes dentro de static)
+        .fallback_service(ServeDir::new("public"));
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
-    println!("Servidor Web iniciado en http://{}", addr);
+    // 3. Obtener Puerto (local o Render)
+    let port_str = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
+    let port: u16 = port_str.parse().expect("PORT debe ser un número válido");
 
-    let listener = tokio::net::TcpListener::bind(addr).await?;
-    axum::serve(listener, app).await?;
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
+    println!("Servidor iniciado en http://localhost:{}", port);
 
-    Ok(())
+    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
+    axum::serve(listener, app).await.unwrap();
+}
+
+// Ejemplo temporal para verificar que responda la API
+async fn obtener_perfumes() -> axum::Json<serde_json::Value> {
+    axum::Json(serde_json::json!([
+        {
+            "id_perfume": 1,
+            "sku": "PERF-001",
+            "nombre": "Acqua Di Gio",
+            "genero": "Hombre",
+            "precio_costo": "850.00",
+            "precio_venta": "1950.00",
+            "imagen_url": "https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=200"
+        }
+    ]))
 }

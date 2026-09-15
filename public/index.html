@@ -2,14 +2,13 @@
 <html lang="es" class="h-full">
 <head>
     <meta charset="UTF-8">
-    <!-- 1. El pilar indispensable: Viewport -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SkyOps - Framework7 Style</title>
+    <title>Perfumería ERP - Mantenimiento Adaptativo</title>
 
-    <!-- CSS de Framework7 (Estilos nativos iOS / Material) -->
+    <!-- CSS Framework7 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/framework7@8.3.3/framework7-bundle.min.css">
     
-    <!-- Tailwind CSS (Para utilidades rápidas de layout) -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -30,7 +29,7 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // Componente Contenedor AG Grid
+        // 1. VISTA DE TABLA PARA ESCRITORIO (AG Grid)
         function GridView({ rowData, quickFilterText, sidebarColapsado, onEditar, onEliminar }) {
             const gridRef = useRef(null);
             const gridApiRef = useRef(null);
@@ -39,16 +38,35 @@
                 if (!gridRef.current) return;
 
                 const columnDefs = [
+                    {
+                        headerName: 'Imagen',
+                        field: 'imagen_url',
+                        width: 80,
+                        sortable: false,
+                        filter: false,
+                        cellRenderer: (params) => {
+                            const url = params.value || 'https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=100';
+                            return `<div class="flex items-center justify-center h-full"><img src="${url}" class="h-9 w-9 object-cover rounded-md shadow-sm" /></div>`;
+                        }
+                    },
                     { 
-                        headerName: 'Código', 
-                        field: 'codigo', 
+                        headerName: 'SKU', 
+                        field: 'sku', 
                         sortable: true, 
                         filter: true,
-                        width: 100,
-                        cellRenderer: (params) => `<span class="badge color-blue">${params.value}</span>`
+                        width: 120,
+                        cellRenderer: (params) => `<span class="badge color-blue font-mono">${params.value}</span>`
                     },
-                    { headerName: 'Nombre del Aeropuerto', field: 'nombre', sortable: true, filter: true, flex: 2, minWidth: 180 },
-                    { headerName: 'Ciudad', field: 'ciudad', sortable: true, filter: true, flex: 1, minWidth: 120 },
+                    { headerName: 'Nombre del Perfume', field: 'nombre', sortable: true, filter: true, flex: 2, minWidth: 180 },
+                    { headerName: 'Género', field: 'genero', sortable: true, filter: true, width: 110 },
+                    { 
+                        headerName: 'Precio Venta', 
+                        field: 'precio_venta', 
+                        sortable: true, 
+                        filter: true,
+                        width: 130,
+                        cellRenderer: (params) => `<span class="font-bold text-emerald-700">$${parseFloat(params.value || 0).toFixed(2)}</span>`
+                    },
                     { 
                         headerName: 'Acciones', 
                         sortable: false, 
@@ -69,12 +87,13 @@
                     pagination: true,
                     paginationPageSize: 10,
                     animateRows: true,
+                    rowHeight: 48,
                     onCellClicked: (params) => {
                         const target = params.event.target.closest('button');
                         if (!target) return;
                         const action = target.getAttribute('data-action');
                         if (action === 'edit') onEditar(params.data);
-                        if (action === 'delete') onEliminar(params.data.codigo);
+                        if (action === 'delete') onEliminar(params.data.id_perfume || params.data.sku);
                     }
                 };
 
@@ -102,38 +121,153 @@
             return <div ref={gridRef} className="ag-theme-alpine w-full h-full rounded-xl shadow-sm border border-slate-200"></div>;
         }
 
+        // 2. VISTA DE TARJETAS (CARDS) PARA MÓVILES
+        function MobileCardsView({ rowData, quickFilterText, onEditar, onEliminar }) {
+            const filtrados = rowData.filter(item => {
+                if (!quickFilterText) return true;
+                const busqueda = quickFilterText.toLowerCase();
+                return item.nombre?.toLowerCase().includes(busqueda) || 
+                       item.sku?.toLowerCase().includes(busqueda) ||
+                       item.genero?.toLowerCase().includes(busqueda);
+            });
+
+            if (filtrados.length === 0) {
+                return (
+                    <div className="text-center py-10 text-slate-400">
+                        No se encontraron perfumes registrados.
+                    </div>
+                );
+            }
+
+            return (
+                <div className="space-y-3 pb-8">
+                    {filtrados.map((item, idx) => {
+                        const imgUrl = item.imagen_url || 'https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=200';
+                        return (
+                            <div key={item.id_perfume || idx} className="card margin-none padding-none shadow-sm rounded-xl border border-slate-200 bg-white overflow-hidden">
+                                <div className="p-3 flex items-center gap-3">
+                                    <img src={imgUrl} className="w-16 h-16 object-cover rounded-lg border border-slate-100 flex-shrink-0" alt="Perfume" />
+                                    
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center justify-between gap-1">
+                                            <span className="badge color-blue font-mono text-[10px]">{item.sku}</span>
+                                            <span className="text-xs font-semibold text-slate-500">{item.genero || 'Unisex'}</span>
+                                        </div>
+                                        <h4 className="font-bold text-slate-800 text-sm truncate mt-0.5">{item.nombre}</h4>
+                                        <div className="text-emerald-700 font-extrabold text-base mt-1">
+                                            ${parseFloat(item.precio_venta || 0).toFixed(2)}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Botones táctiles grandes en dispositivos móviles */}
+                                <div className="border-t border-slate-100 bg-slate-50 p-2 flex gap-2 justify-end">
+                                    <button 
+                                        onClick={() => onEditar(item)} 
+                                        className="button button-small button-fill color-blue flex-1 flex items-center justify-center gap-1 py-1 text-xs"
+                                    >
+                                        ✏️ Editar
+                                    </button>
+                                    <button 
+                                        onClick={() => onEliminar(item.id_perfume || item.sku)} 
+                                        className="button button-small button-outline color-red flex-1 flex items-center justify-center gap-1 py-1 text-xs"
+                                    >
+                                        🗑️ Eliminar
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        }
+
         function App() {
             const [sidebarColapsado, setSidebarColapsado] = useState(false);
             const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
 
-            const [aeropuertos, setAeropuertos] = useState([
-                { codigo: 'JFK', nombre: 'John F. Kennedy Intl', ciudad: 'New York', activo: true },
-                { codigo: 'MEX', nombre: 'Aeropuerto Intl CDMX', ciudad: 'Ciudad de México', activo: true },
-                { codigo: 'MAD', nombre: 'Adolfo Suárez Barajas', ciudad: 'Madrid', activo: false }
-            ]);
-            
+            const [perfumes, setPerfumes] = useState([]);
             const [busqueda, setBusqueda] = useState('');
             const [modalAbierto, setModalAbierto] = useState(false);
             const [modoEdicion, setModoEdicion] = useState(false);
-            const [formData, setFormData] = useState({ codigo: '', nombre: '', ciudad: '', activo: true });
+            
+            const initialFormState = {
+                id_perfume: null,
+                sku: '',
+                nombre: '',
+                id_marca: 1,
+                id_familia: 1,
+                id_concentracion: 1,
+                genero: 'Unisex',
+                ml: 100,
+                precio_costo: '500.00',
+                precio_venta: '1200.00',
+                imagen_url: ''
+            };
+            const [formData, setFormData] = useState(initialFormState);
+
+            const cargarPerfumes = async () => {
+                try {
+                    const res = await fetch('/api/catalogos/perfumes');
+                    if (res.ok) {
+                        const data = await res.json();
+                        setPerfumes(data);
+                    }
+                } catch (err) {
+                    console.error("Error al conectar con la API:", err);
+                }
+            };
+
+            useEffect(() => {
+                cargarPerfumes();
+            }, []);
 
             useEffect(() => {
                 if (window.lucide) window.lucide.createIcons();
             }, [sidebarColapsado, menuMovilAbierto, modalAbierto]);
 
-            const handleSubmit = (e) => {
+            const handleSubmit = async (e) => {
                 e.preventDefault();
-                if (modoEdicion) {
-                    setAeropuertos(aeropuertos.map(a => a.codigo === formData.codigo ? formData : a));
-                } else {
-                    setAeropuertos([...aeropuertos, { ...formData, codigo: formData.codigo.toUpperCase() }]);
+                const url = modoEdicion 
+                    ? `/api/catalogos/perfumes/${formData.id_perfume}`
+                    : '/api/catalogos/perfumes';
+                
+                const method = modoEdicion ? 'PUT' : 'POST';
+
+                try {
+                    const res = await fetch(url, {
+                        method: method,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            ...formData,
+                            id_marca: parseInt(formData.id_marca),
+                            id_familia: parseInt(formData.id_familia),
+                            id_concentracion: parseInt(formData.id_concentracion),
+                            ml: parseInt(formData.ml),
+                            precio_costo: formData.precio_costo.toString(),
+                            precio_venta: formData.precio_venta.toString()
+                        })
+                    });
+
+                    if (res.ok) {
+                        cargarPerfumes();
+                        setModalAbierto(false);
+                    } else {
+                        alert("Error al guardar el registro.");
+                    }
+                } catch (err) {
+                    console.error("Error guardando perfume:", err);
                 }
-                setModalAbierto(false);
             };
 
-            const handleEliminar = (codigo) => {
-                if (confirm(`¿Eliminar aeropuerto ${codigo}?`)) {
-                    setAeropuertos(aeropuertos.filter(a => a.codigo !== codigo));
+            const handleEliminar = async (id) => {
+                if (confirm(`¿Eliminar o desactivar perfume ID ${id}?`)) {
+                    try {
+                        const res = await fetch(`/api/catalogos/perfumes/${id}`, { method: 'DELETE' });
+                        if (res.ok) cargarPerfumes();
+                    } catch (err) {
+                        console.error("Error eliminando perfume:", err);
+                    }
                 }
             };
 
@@ -145,7 +279,7 @@
                         <div onClick={() => setMenuMovilAbierto(false)} className="fixed inset-0 bg-slate-900/60 z-40 md:hidden"></div>
                     )}
 
-                    {/* MENÚ LATERAL CON ESTILO NATIVO */}
+                    {/* MENÚ LATERAL */}
                     <aside className={`
                         fixed md:static inset-y-0 left-0 z-50 bg-slate-900 text-slate-300 flex flex-col transition-all duration-300
                         ${sidebarColapsado ? 'md:w-20' : 'md:w-64'}
@@ -153,59 +287,60 @@
                     `}>
                         <div className="h-16 px-4 border-b border-slate-800 flex items-center justify-between">
                             <span className="font-bold text-white flex items-center gap-2">
-                                <i data-lucide="plane-takeoff" className="text-sky-400"></i>
-                                {!sidebarColapsado && "SkyOps F7"}
+                                <i data-lucide="sparkles" className="text-amber-400"></i>
+                                {!sidebarColapsado && "Perfumería ERP"}
                             </span>
                             <button onClick={() => setSidebarColapsado(!sidebarColapsado)} className="hidden md:block text-slate-400 hover:text-white">
                                 <i data-lucide={sidebarColapsado ? "chevron-right" : "chevron-left"}></i>
                             </button>
                         </div>
 
-                        {/* Lista de Navegación estilo Framework7 */}
                         <div className="list no-hairlines-between p-2">
                             <ul>
                                 <li>
                                     <a href="#" className="item-link item-content bg-sky-600 rounded-lg text-white">
-                                        <div className="item-media"><i data-lucide="building-2"></i></div>
-                                        {!sidebarColapsado && <div className="item-inner"><div className="item-title">Aeropuertos</div></div>}
+                                        <div className="item-media"><i data-lucide="package"></i></div>
+                                        {!sidebarColapsado && <div className="item-inner"><div className="item-title">Catálogo Perfumes</div></div>}
                                     </a>
                                 </li>
                             </ul>
                         </div>
                     </aside>
 
-                    {/* CONTENIDO PRINCIPAL CON BARRA DE NAVEGACIÓN TIPO iOS/MATERIAL */}
+                    {/* CONTENIDO PRINCIPAL */}
                     <div className="flex-1 flex flex-col h-full overflow-hidden">
                         
-                        {/* NAVBAR CON CLASES FRAMEWORK7 */}
+                        {/* NAVBAR RESPONSIVA */}
                         <div className="navbar bg-white border-b border-slate-200 px-4 flex justify-between items-center h-16 shrink-0">
                             <div className="flex items-center gap-2">
-                                <button onClick={() => setMenuMovilAbierto(true)} className="md:hidden button button-small">
+                                <button onClick={() => setMenuMovilAbierto(true)} className="md:hidden button button-small p-1">
                                     <i data-lucide="menu"></i>
                                 </button>
-                                <div className="title font-bold text-lg text-slate-800">Mantenimiento de Aeropuertos</div>
+                                <div className="title font-bold text-base md:text-lg text-slate-800">Catálogo de Perfumes</div>
                             </div>
                             <button 
                                 onClick={() => {
-                                    setFormData({ codigo: '', nombre: '', ciudad: '', activo: true });
+                                    setFormData(initialFormState);
                                     setModoEdicion(false);
                                     setModalAbierto(true);
                                 }}
-                                className="button button-fill color-blue flex items-center gap-1"
+                                className="button button-fill color-blue flex items-center gap-1 text-xs md:text-sm px-3"
                             >
-                                <i data-lucide="plus" className="w-4 h-4"></i> Nuevo
+                                <i data-lucide="plus" className="w-4 h-4"></i> 
+                                <span className="hidden sm:inline">Nuevo Perfume</span>
+                                <span className="sm:hidden">Nuevo</span>
                             </button>
                         </div>
 
                         {/* CONTENIDO VISTA */}
-                        <main className="flex-1 p-4 flex flex-col min-h-0 overflow-hidden">
+                        <main className="flex-1 p-3 md:p-4 flex flex-col min-h-0 overflow-y-auto md:overflow-hidden">
                             
-                            {/* Buscador nativo con clases F7 */}
-                            <div className="searchbar searchbar-inline mb-4 shrink-0">
+                            {/* Buscador */}
+                            <div className="searchbar searchbar-inline mb-3 shrink-0">
                                 <div className="searchbar-input-wrap">
                                     <input 
                                         type="search" 
-                                        placeholder="Buscar con filtro rápido..." 
+                                        placeholder="Buscar por SKU, Nombre o Género..." 
                                         value={busqueda}
                                         onChange={(e) => setBusqueda(e.target.value)}
                                         className="bg-white border border-slate-300 rounded-lg px-3 py-2 w-full text-sm outline-none"
@@ -213,10 +348,25 @@
                                 </div>
                             </div>
 
-                            {/* AG Grid Adaptativo */}
-                            <div className="flex-1 min-h-0 w-full">
+                            {/* CONDICIONAL RESPONSIVO */}
+                            {/* 1. VISTA MÓVIL (cards) */}
+                            <div className="block md:hidden flex-1">
+                                <MobileCardsView 
+                                    rowData={perfumes}
+                                    quickFilterText={busqueda}
+                                    onEditar={(item) => {
+                                        setFormData(item);
+                                        setModoEdicion(true);
+                                        setModalAbierto(true);
+                                    }}
+                                    onEliminar={handleEliminar}
+                                />
+                            </div>
+
+                            {/* 2. VISTA ESCRITORIO (AG Grid) */}
+                            <div className="hidden md:block flex-1 min-h-0 w-full">
                                 <GridView 
-                                    rowData={aeropuertos} 
+                                    rowData={perfumes} 
                                     quickFilterText={busqueda} 
                                     sidebarColapsado={sidebarColapsado}
                                     onEditar={(item) => {
@@ -230,42 +380,92 @@
                         </main>
                     </div>
 
-                    {/* POPUP / MODAL TIPO FRAMEWORK7 */}
+                    {/* MODAL ADAPTATIVO */}
                     {modalAbierto && (
-                        <div className="popup popup-open fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center p-4 z-50">
-                            <div className="block bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+                        <div className="popup popup-open fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-end sm:items-center p-0 sm:p-4 z-50">
+                            <div className="block bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[85vh] sm:max-h-[90vh] flex flex-col">
                                 <div className="navbar bg-slate-50 border-b border-slate-200 px-4 py-3 flex justify-between items-center">
-                                    <div className="title font-bold text-slate-800">{modoEdicion ? 'Editar Aeropuerto' : 'Nuevo Aeropuerto'}</div>
-                                    <button onClick={() => setModalAbierto(false)} className="link text-slate-500 font-bold">Cerrar</button>
+                                    <div className="title font-bold text-slate-800 text-base">{modoEdicion ? 'Editar Perfume' : 'Nuevo Perfume'}</div>
+                                    <button onClick={() => setModalAbierto(false)} className="link text-slate-500 font-bold text-sm">Cerrar</button>
                                 </div>
-                                <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                                    <div className="list no-hairlines-md space-y-3">
+                                
+                                <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-3 overflow-y-auto flex-1">
+                                    <div className="grid grid-cols-2 gap-3">
                                         <div>
-                                            <div className="item-title item-label text-xs font-semibold text-slate-500">CÓDIGO IATA</div>
+                                            <label className="text-xs font-semibold text-slate-500">SKU</label>
                                             <input 
                                                 type="text" 
-                                                disabled={modoEdicion}
                                                 required 
-                                                maxLength="3"
-                                                value={formData.codigo} 
-                                                onChange={e => setFormData({...formData, codigo: e.target.value})}
+                                                value={formData.sku} 
+                                                onChange={e => setFormData({...formData, sku: e.target.value})}
                                                 className="border border-slate-300 rounded-lg p-2.5 w-full text-sm font-mono uppercase"
+                                                placeholder="PERF-009"
                                             />
                                         </div>
                                         <div>
-                                            <div className="item-title item-label text-xs font-semibold text-slate-500">NOMBRE</div>
+                                            <label className="text-xs font-semibold text-slate-500">GÉNERO</label>
+                                            <select 
+                                                value={formData.genero || 'Unisex'}
+                                                onChange={e => setFormData({...formData, genero: e.target.value})}
+                                                className="border border-slate-300 rounded-lg p-2.5 w-full text-sm bg-white"
+                                            >
+                                                <option value="Hombre">Hombre</option>
+                                                <option value="Mujer">Mujer</option>
+                                                <option value="Unisex">Unisex</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="text-xs font-semibold text-slate-500">NOMBRE DEL PERFUME</label>
+                                        <input 
+                                            type="text" 
+                                            required 
+                                            value={formData.nombre} 
+                                            onChange={e => setFormData({...formData, nombre: e.target.value})}
+                                            className="border border-slate-300 rounded-lg p-2.5 w-full text-sm"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="text-xs font-semibold text-slate-500">COSTO ($)</label>
                                             <input 
-                                                type="text" 
+                                                type="number" 
+                                                step="0.01"
                                                 required 
-                                                value={formData.nombre} 
-                                                onChange={e => setFormData({...formData, nombre: e.target.value})}
+                                                value={formData.precio_costo} 
+                                                onChange={e => setFormData({...formData, precio_costo: e.target.value})}
                                                 className="border border-slate-300 rounded-lg p-2.5 w-full text-sm"
                                             />
                                         </div>
+                                        <div>
+                                            <label className="text-xs font-semibold text-slate-500">PRECIO VENTA ($)</label>
+                                            <input 
+                                                type="number" 
+                                                step="0.01"
+                                                required 
+                                                value={formData.precio_venta} 
+                                                onChange={e => setFormData({...formData, precio_venta: e.target.value})}
+                                                className="border border-slate-300 rounded-lg p-2.5 w-full text-sm font-bold text-emerald-700"
+                                            />
+                                        </div>
                                     </div>
+
+                                    <div>
+                                        <label className="text-xs font-semibold text-slate-500">URL IMAGEN</label>
+                                        <input 
+                                            type="url" 
+                                            value={formData.imagen_url || ''} 
+                                            onChange={e => setFormData({...formData, imagen_url: e.target.value})}
+                                            className="border border-slate-300 rounded-lg p-2.5 w-full text-sm"
+                                            placeholder="https://..."
+                                        />
+                                    </div>
+
                                     <div className="pt-4 flex justify-end gap-2">
-                                        <button type="button" onClick={() => setModalAbierto(false)} className="button button-outline color-gray">Cancelar</button>
-                                        <button type="submit" className="button button-fill color-blue">Guardar</button>
+                                        <button type="button" onClick={() => setModalAbierto(false)} className="button button-outline color-gray flex-1 sm:flex-none">Cancelar</button>
+                                        <button type="submit" className="button button-fill color-blue flex-1 sm:flex-none">Guardar</button>
                                     </div>
                                 </form>
                             </div>
