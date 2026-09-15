@@ -4,14 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ERP Perfumería</title>
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- AG Grid -->
   <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
 </head>
 <body class="bg-gray-100 font-sans text-gray-800">
 
-  <!-- Layout Principal -->
   <div class="flex h-screen overflow-hidden">
     
     <!-- Sidebar / Menú Lateral -->
@@ -20,7 +17,7 @@
         <span>🌸</span> ERP Perfumería
       </div>
       <nav class="flex-1 p-4 space-y-2">
-        <a href="#" onclick="cambiarModulo('perfumes')" class="block py-2.5 px-4 rounded bg-indigo-600 hover:bg-indigo-700 transition">
+        <a href="#" class="block py-2.5 px-4 rounded bg-indigo-600 hover:bg-indigo-700 transition">
           🧪 Catálogo Perfumes
         </a>
         <a href="#" onclick="alert('Módulo de Ventas en desarrollo...')" class="block py-2.5 px-4 rounded hover:bg-slate-800 transition text-gray-400">
@@ -35,20 +32,21 @@
       </div>
     </aside>
 
-    <!-- Áreas de Contenido Principal -->
+    <!-- Área de Contenido Principal -->
     <main class="flex-1 flex flex-col overflow-y-auto">
       
-      <!-- Topbar / Navbar Móvil -->
-      <header class="bg-white shadow-sm p-4 flex justify-between items-center md:justify-end">
+      <!-- Topbar -->
+      <header class="bg-white shadow-sm p-4 flex justify-between items-center">
         <h1 class="text-lg font-bold md:hidden">🌸 Perfumería ERP</h1>
-        <button onclick="abrirModalCrear()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded-lg text-sm transition">
+        <div class="flex-1 hidden md:block"></div>
+        <button onclick="abrirModalNuevo()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded-lg text-sm transition">
           + Nuevo Perfume
         </button>
       </header>
 
       <!-- Vista de Contenido -->
       <div class="p-6 flex-1">
-        <div class="mb-4 flex justify-between items-center">
+        <div class="mb-4">
           <h2 class="text-2xl font-bold text-gray-800">Catálogo de Perfumes</h2>
         </div>
 
@@ -63,22 +61,40 @@
   </div>
 
   <!-- Modal para Crear / Editar Perfume -->
-  <div id="modalForm" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4">
+  <div id="modalPerfume" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-      <h3 class="text-lg font-bold mb-4" id="modalTitulo">Agregar Perfume</h3>
+      <h3 class="text-lg font-bold mb-4" id="modalTitulo">Nuevo Perfume</h3>
       <form id="perfumeForm" onsubmit="guardarPerfume(event)" class="space-y-3">
-        <input type="hidden" id="perfumeId">
+        <input type="hidden" id="id_perfume">
         <div>
-          <label class="block text-xs font-semibold uppercase text-gray-500">Nombre</label>
+          <label class="block text-xs font-semibold text-gray-500 uppercase">SKU</label>
+          <input type="text" id="sku" required class="w-full border p-2 rounded mt-1">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase">Nombre</label>
           <input type="text" id="nombre" required class="w-full border p-2 rounded mt-1">
         </div>
         <div>
-          <label class="block text-xs font-semibold uppercase text-gray-500">Marca</label>
-          <input type="text" id="marca" required class="w-full border p-2 rounded mt-1">
+          <label class="block text-xs font-semibold text-gray-500 uppercase">Género</label>
+          <select id="genero" class="w-full border p-2 rounded mt-1">
+            <option value="Hombre">Hombre</option>
+            <option value="Mujer">Mujer</option>
+            <option value="Unisex">Unisex</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase">P. Costo</label>
+            <input type="number" step="0.01" id="precio_costo" required class="w-full border p-2 rounded mt-1">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase">P. Venta</label>
+            <input type="number" step="0.01" id="precio_venta" required class="w-full border p-2 rounded mt-1">
+          </div>
         </div>
         <div>
-          <label class="block text-xs font-semibold uppercase text-gray-500">Precio ($)</label>
-          <input type="number" step="0.01" id="precio" required class="w-full border p-2 rounded mt-1">
+          <label class="block text-xs font-semibold text-gray-500 uppercase">URL Imagen</label>
+          <input type="text" id="imagen_url" class="w-full border p-2 rounded mt-1">
         </div>
         <div class="flex justify-end gap-2 pt-3">
           <button type="button" onclick="cerrarModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>
@@ -91,62 +107,84 @@
   <script>
     let gridApi = null;
 
-    // Configuración de AG Grid
     const columnDefs = [
-      { field: "id", headerName: "ID", width: 80 },
-      { field: "nombre", headerName: "Nombre Perfume", flex: 1 },
-      { field: "marca", headerName: "Marca", flex: 1 },
-      { field: "precio", headerName: "Precio ($)", width: 120 },
+      { 
+        field: "imagen_url", 
+        headerName: "Imagen", 
+        width: 90,
+        cellRenderer: (p) => p.value ? `<img src="${p.value}" class="h-8 w-8 object-cover rounded shadow my-1">` : '📷'
+      },
+      { field: "sku", headerName: "SKU", width: 120 },
+      { field: "nombre", headerName: "Nombre del Perfume", flex: 1 },
+      { field: "genero", headerName: "Género", width: 120 },
+      { field: "precio_venta", headerName: "Precio Venta", width: 130, valueFormatter: p => `$${p.value}` },
       {
         headerName: "Acciones",
-        width: 150,
-        cellRenderer: (params) => `
-          <button onclick="eliminarPerfume(${params.data.id})" class="text-red-600 hover:underline text-xs mr-2">Eliminar</button>
-        `
+        width: 120,
+        cellRenderer: (params) => {
+          window[`perfume_${params.data.id_perfume}`] = params.data;
+          return `
+            <button onclick='abrirModalEditar(${params.data.id_perfume})' class="text-blue-600 hover:text-blue-800 mr-2">✏️</button>
+            <button onclick="eliminarPerfume(${params.data.id_perfume})" class="text-red-600 hover:text-red-800">🗑️</button>
+          `;
+        }
       }
     ];
 
     async function cargarPerfumes() {
-      const res = await fetch('/api/catalogos/perfumes');
-      const data = await res.json();
-      
-      // Cargar en AG Grid
-      if (gridApi) {
-        gridApi.setGridOption('rowData', data);
-      } else {
-        const gridDiv = document.querySelector('#gridContainer');
-        gridApi = agGrid.createGrid(gridDiv, {
-          columnDefs: columnDefs,
-          rowData: data,
-          pagination: true
-        });
-      }
+      try {
+        const res = await fetch('/api/catalogos/perfumes');
+        const data = await res.json();
+        
+        if (gridApi) {
+          gridApi.setGridOption('rowData', data);
+        } else {
+          const gridDiv = document.querySelector('#gridContainer');
+          gridApi = agGrid.createGrid(gridDiv, {
+            columnDefs: columnDefs,
+            rowData: data,
+            pagination: true
+          });
+        }
 
-      // Cargar en vista Móvil
-      const mobileDiv = document.getElementById('mobileContainer');
-      mobileDiv.innerHTML = data.map(p => `
-        <div class="bg-white p-4 rounded-lg shadow border border-gray-100 flex justify-between items-center">
-          <div>
-            <h4 class="font-bold text-gray-900">${p.nombre}</h4>
-            <p class="text-sm text-gray-500">${p.marca} - <span class="font-semibold text-emerald-600">$${p.precio}</span></p>
+        const mobileDiv = document.getElementById('mobileContainer');
+        mobileDiv.innerHTML = data.map(p => `
+          <div class="bg-white p-4 rounded-lg shadow border border-gray-100 flex justify-between items-center">
+            <div>
+              <h4 class="font-bold text-gray-900">${p.nombre}</h4>
+              <p class="text-xs text-gray-500">${p.sku} | ${p.genero}</p>
+              <p class="text-sm font-semibold text-emerald-600 mt-1">$${p.precio_venta}</p>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="abrirModalEditar(${p.id_perfume})" class="p-2 text-blue-600">✏️</button>
+              <button onclick="eliminarPerfume(${p.id_perfume})" class="p-2 text-red-600">🗑️</button>
+            </div>
           </div>
-          <button onclick="eliminarPerfume(${p.id})" class="text-red-500 p-2">🗑️</button>
-        </div>
-      `).join('');
+        `).join('');
+      } catch (err) {
+        console.error("Error cargando perfumes:", err);
+      }
     }
 
     async function guardarPerfume(e) {
       e.preventDefault();
-      const perfume = {
+      const id = document.getElementById('id_perfume').value;
+      const body = {
+        sku: document.getElementById('sku').value,
         nombre: document.getElementById('nombre').value,
-        marca: document.getElementById('marca').value,
-        precio: parseFloat(document.getElementById('precio').value)
+        genero: document.getElementById('genero').value,
+        precio_costo: parseFloat(document.getElementById('precio_costo').value),
+        precio_venta: parseFloat(document.getElementById('precio_venta').value),
+        imagen_url: document.getElementById('imagen_url').value || null
       };
 
-      await fetch('/api/catalogos/perfumes', {
-        method: 'POST',
+      const url = id ? `/api/catalogos/perfumes/${id}` : '/api/catalogos/perfumes';
+      const method = id ? 'PUT' : 'POST';
+
+      await fetch(url, {
+        method: method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(perfume)
+        body: JSON.stringify(body)
       });
 
       cerrarModal();
@@ -154,21 +192,38 @@
     }
 
     async function eliminarPerfume(id) {
-      if (confirm('¿Eliminar este perfume?')) {
+      if (confirm('¿Deseas eliminar este perfume?')) {
         await fetch(`/api/catalogos/perfumes/${id}`, { method: 'DELETE' });
         cargarPerfumes();
       }
     }
 
-    function abrirModalCrear() {
+    function abrirModalNuevo() {
       document.getElementById('perfumeForm').reset();
-      document.getElementById('modalForm').classList.remove('hidden');
-      document.getElementById('modalForm').classList.add('flex');
+      document.getElementById('id_perfume').value = '';
+      document.getElementById('modalTitulo').innerText = 'Nuevo Perfume';
+      document.getElementById('modalPerfume').classList.remove('hidden');
+      document.getElementById('modalPerfume').classList.add('flex');
+    }
+
+    function abrirModalEditar(id) {
+      const p = window[`perfume_${id}`];
+      if (!p) return;
+      document.getElementById('id_perfume').value = p.id_perfume;
+      document.getElementById('sku').value = p.sku;
+      document.getElementById('nombre').value = p.nombre;
+      document.getElementById('genero').value = p.genero;
+      document.getElementById('precio_costo').value = p.precio_costo;
+      document.getElementById('precio_venta').value = p.precio_venta;
+      document.getElementById('imagen_url').value = p.imagen_url || '';
+      document.getElementById('modalTitulo').innerText = 'Editar Perfume';
+      document.getElementById('modalPerfume').classList.remove('hidden');
+      document.getElementById('modalPerfume').classList.add('flex');
     }
 
     function cerrarModal() {
-      document.getElementById('modalForm').classList.add('hidden');
-      document.getElementById('modalForm').classList.remove('flex');
+      document.getElementById('modalPerfume').classList.add('hidden');
+      document.getElementById('modalPerfume').classList.remove('flex');
     }
 
     document.addEventListener('DOMContentLoaded', cargarPerfumes);
