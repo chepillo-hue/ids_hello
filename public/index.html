@@ -1,232 +1,244 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ERP Perfumería</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERP Perfumería - Sistema de Gestión</title>
+
+    <!-- Tailwind CSS (Estilos) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- AG Grid Community CSS + JS -->
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
+
+    <!-- FontAwesome (Iconos) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-gray-100 font-sans text-gray-800">
+<body class="bg-gray-100 font-sans h-screen flex flex-col">
 
-  <div class="flex h-screen overflow-hidden">
-    
-    <!-- Sidebar / Menú Lateral -->
-    <aside class="w-64 bg-slate-900 text-white flex flex-col hidden md:flex">
-      <div class="p-5 font-bold text-xl border-b border-slate-800 flex items-center gap-2">
-        <span>🌸</span> ERP Perfumería
-      </div>
-      <nav class="flex-1 p-4 space-y-2">
-        <a href="#" class="block py-2.5 px-4 rounded bg-indigo-600 hover:bg-indigo-700 transition">
-          🧪 Catálogo Perfumes
-        </a>
-        <a href="#" onclick="alert('Módulo de Ventas en desarrollo...')" class="block py-2.5 px-4 rounded hover:bg-slate-800 transition text-gray-400">
-          🛒 Ventas (Próximamente)
-        </a>
-        <a href="#" onclick="alert('Módulo de Inventario en desarrollo...')" class="block py-2.5 px-4 rounded hover:bg-slate-800 transition text-gray-400">
-          📦 Inventario (Próximamente)
-        </a>
-      </nav>
-      <div class="p-4 text-xs text-slate-500 border-t border-slate-800">
-        v1.0.0 — Despliegue Render
-      </div>
-    </aside>
-
-    <!-- Área de Contenido Principal -->
-    <main class="flex-1 flex flex-col overflow-y-auto">
-      
-      <!-- Topbar -->
-      <header class="bg-white shadow-sm p-4 flex justify-between items-center">
-        <h1 class="text-lg font-bold md:hidden">🌸 Perfumería ERP</h1>
-        <div class="flex-1 hidden md:block"></div>
-        <button onclick="abrirModalNuevo()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded-lg text-sm transition">
-          + Nuevo Perfume
-        </button>
-      </header>
-
-      <!-- Vista de Contenido -->
-      <div class="p-6 flex-1">
-        <div class="mb-4">
-          <h2 class="text-2xl font-bold text-gray-800">Catálogo de Perfumes</h2>
+    <!-- 1. BARRA SUPERIOR DE NAVEGACIÓN (HEADER) -->
+    <header class="bg-slate-900 text-white shadow-md">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid fa-bottle-droplet text-pink-500 text-2xl"></i>
+                <h1 class="text-xl font-bold tracking-wide">Perfumería ERP</h1>
+            </div>
+            <span class="text-xs bg-slate-800 text-slate-300 px-3 py-1 rounded-full border border-slate-700">
+                <i class="fa-solid fa-database text-green-400 mr-1"></i> PostgreSQL Online
+            </span>
         </div>
 
-        <!-- Tabla AG Grid (Escritorio) -->
-        <div id="gridContainer" class="hidden md:block ag-theme-alpine w-full h-[500px] shadow rounded-lg overflow-hidden"></div>
+        <!-- MENU PRINCIPAL / PESTAÑAS Y SUBMENÚS -->
+        <nav class="bg-slate-800 border-t border-slate-700">
+            <div class="container mx-auto flex flex-wrap gap-1 px-4 text-sm font-medium">
 
-        <!-- Vista Tarjetas (Móvil) -->
-        <div id="mobileContainer" class="block md:hidden space-y-4"></div>
-      </div>
+                <!-- GRUPO: CATÁLOGOS BASE -->
+                <div class="relative group">
+                    <button class="flex items-center space-x-2 px-4 py-3 hover:bg-slate-700 text-slate-200 focus:outline-none">
+                        <i class="fa-solid fa-folder text-amber-400"></i>
+                        <span>Catálogos Base</span>
+                        <i class="fa-solid fa-chevron-down text-xs ml-1 opacity-70"></i>
+                    </button>
+                    <!-- Submenú desplegable -->
+                    <div class="absolute left-0 top-full hidden group-hover:block w-48 bg-white text-gray-800 shadow-xl rounded-b border z-50">
+                        <a href="#" onclick="cargarModulo('marcas')" class="block px-4 py-2 hover:bg-gray-100 flex items-center space-x-2">
+                            <i class="fa-solid fa-tags text-indigo-500 w-4"></i><span>Marcas</span>
+                        </a>
+                        <a href="#" onclick="cargarModulo('familias')" class="block px-4 py-2 hover:bg-gray-100 flex items-center space-x-2">
+                            <i class="fa-solid fa-layer-group text-purple-500 w-4"></i><span>Familias Olfativas</span>
+                        </a>
+                        <a href="#" onclick="cargarModulo('concentraciones')" class="block px-4 py-2 hover:bg-gray-100 flex items-center space-x-2">
+                            <i class="fa-solid fa-vial text-teal-500 w-4"></i><span>Concentraciones</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- GRUPO: INVENTARIO / PRODUCTOS -->
+                <button onclick="cargarModulo('perfumes')" class="flex items-center space-x-2 px-4 py-3 hover:bg-slate-700 text-slate-200">
+                    <i class="fa-solid fa-boxes-stacked text-blue-400"></i>
+                    <span>Perfumes / Productos</span>
+                </button>
+
+                <!-- GRUPO: TERCEROS (CLIENTES Y PROVEEDORES) -->
+                <div class="relative group">
+                    <button class="flex items-center space-x-2 px-4 py-3 hover:bg-slate-700 text-slate-200 focus:outline-none">
+                        <i class="fa-solid fa-users text-emerald-400"></i>
+                        <span>Contactos</span>
+                        <i class="fa-solid fa-chevron-down text-xs ml-1 opacity-70"></i>
+                    </button>
+                    <div class="absolute left-0 top-full hidden group-hover:block w-48 bg-white text-gray-800 shadow-xl rounded-b border z-50">
+                        <a href="#" onclick="cargarModulo('clientes')" class="block px-4 py-2 hover:bg-gray-100 flex items-center space-x-2">
+                            <i class="fa-solid fa-user-tag text-emerald-600 w-4"></i><span>Clientes</span>
+                        </a>
+                        <a href="#" onclick="cargarModulo('proveedores')" class="block px-4 py-2 hover:bg-gray-100 flex items-center space-x-2">
+                            <i class="fa-solid fa-truck-field text-orange-500 w-4"></i><span>Proveedores</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- GRUPO: OPERACIONES -->
+                <button onclick="cargarModulo('ventas')" class="flex items-center space-x-2 px-4 py-3 hover:bg-slate-700 text-slate-200">
+                    <i class="fa-solid fa-cart-shopping text-rose-400"></i>
+                    <span>Ventas</span>
+                </button>
+
+                <button onclick="cargarModulo('compras')" class="flex items-center space-x-2 px-4 py-3 hover:bg-slate-700 text-slate-200">
+                    <i class="fa-solid fa-bag-shopping text-cyan-400"></i>
+                    <span>Compras</span>
+                </button>
+
+            </div>
+        </nav>
+    </header>
+
+    <!-- 2. ÁREA PRINCIPAL DE CONTENIDO -->
+    <main class="flex-1 p-4 flex flex-col container mx-auto">
+
+        <!-- ENCABEZADO DEL MÓDULO ACTIVO -->
+        <div class="bg-white p-4 rounded-t-lg border-b border-gray-200 flex justify-between items-center shadow-sm">
+            <div>
+                <h2 id="titulo-modulo" class="text-xl font-bold text-gray-800">Perfumes / Productos</h2>
+                <p id="subtitulo-modulo" class="text-xs text-gray-500">Listado completo de productos registrados</p>
+            </div>
+            <div class="flex space-x-2">
+                <button onclick="recargarDatos()" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm font-medium flex items-center space-x-1">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span>Actualizar</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- CONTENEDOR DE LA TABLA (AG GRID) -->
+        <div class="flex-1 bg-white rounded-b-lg shadow-sm p-2 flex flex-col">
+            <div id="myGrid" class="ag-theme-alpine w-full h-full" style="min-height: 450px;"></div>
+        </div>
     </main>
 
-  </div>
+    <!-- 3. LÓGICA DE JAVASCRIPT -->
+    <script>
+        let gridApi = null;
+        let moduloActual = 'perfumes';
 
-  <!-- Modal para Crear / Editar Perfume -->
-  <div id="modalPerfume" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-      <h3 class="text-lg font-bold mb-4" id="modalTitulo">Nuevo Perfume</h3>
-      <form id="perfumeForm" onsubmit="guardarPerfume(event)" class="space-y-3">
-        <input type="hidden" id="id_perfume">
-        <div>
-          <label class="block text-xs font-semibold text-gray-500 uppercase">SKU</label>
-          <input type="text" id="sku" required class="w-full border p-2 rounded mt-1">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-gray-500 uppercase">Nombre</label>
-          <input type="text" id="nombre" required class="w-full border p-2 rounded mt-1">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-gray-500 uppercase">Género</label>
-          <select id="genero" class="w-full border p-2 rounded mt-1">
-            <option value="Hombre">Hombre</option>
-            <option value="Mujer">Mujer</option>
-            <option value="Unisex">Unisex</option>
-          </select>
-        </div>
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block text-xs font-semibold text-gray-500 uppercase">P. Costo</label>
-            <input type="number" step="0.01" id="precio_costo" required class="w-full border p-2 rounded mt-1">
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-gray-500 uppercase">P. Venta</label>
-            <input type="number" step="0.01" id="precio_venta" required class="w-full border p-2 rounded mt-1">
-          </div>
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-gray-500 uppercase">URL Imagen</label>
-          <input type="text" id="imagen_url" class="w-full border p-2 rounded mt-1">
-        </div>
-        <div class="flex justify-end gap-2 pt-3">
-          <button type="button" onclick="cerrarModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>
-          <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Guardar</button>
-        </div>
-      </form>
-    </div>
-  </div>
+        // Definición de columnas por cada catálogo
+        const configuracionColumnas = {
+            perfumes: [
+                { field: "sku", headerName: "SKU", width: 110 },
+                { field: "nombre", headerName: "Perfume", flex: 1, filter: true },
+                { field: "genero", headerName: "Género", width: 120 },
+                { field: "marca", headerName: "Marca", width: 130 },
+                { field: "familia", headerName: "Familia Olfativa", flex: 1 },
+                { field: "concentracion", headerName: "Concentración", width: 140 },
+                { field: "precio_costo", headerName: "Costo ($)", width: 110, valueFormatter: p => `$${p.value?.toFixed(2)}` },
+                { field: "precio_venta", headerName: "Venta ($)", width: 110, valueFormatter: p => `$${p.value?.toFixed(2)}` },
+                { field: "stock", headerName: "Stock", width: 90, cellClass: p => p.value < 10 ? 'text-red-600 font-bold' : 'text-green-600' }
+            ],
+            marcas: [
+                { field: "id_marca", headerName: "ID", width: 90 },
+                { field: "nombre", headerName: "Nombre de la Marca", flex: 1, filter: true },
+                { field: "pais_origen", headerName: "País de Origen", flex: 1 }
+            ],
+            familias: [
+                { field: "id_familia", headerName: "ID", width: 90 },
+                { field: "nombre", headerName: "Familia Olfativa", width: 200 },
+                { field: "descripcion", headerName: "Descripción", flex: 1 }
+            ],
+            concentraciones: [
+                { field: "id_concentracion", headerName: "ID", width: 90 },
+                { field: "nombre", headerName: "Nombre Concentración", flex: 1 },
+                { field: "siglas", headerName: "Siglas", width: 120 }
+            ],
+            clientes: [
+                { field: "id_cliente", headerName: "ID", width: 90 },
+                { field: "nombre", headerName: "Cliente", flex: 1, filter: true },
+                { field: "telefono", headerName: "Teléfono", width: 150 },
+                { field: "email", headerName: "Email", flex: 1 },
+                { field: "tipo", headerName: "Tipo Cliente", width: 130 }
+            ],
+            proveedores: [
+                { field: "id_proveedor", headerName: "ID", width: 90 },
+                { field: "razon_social", headerName: "Razón Social / Proveedor", flex: 1, filter: true },
+                { field: "rfc", headerName: "RFC", width: 140 },
+                { field: "contacto", headerName: "Contacto", width: 160 },
+                { field: "telefono", headerName: "Teléfono", width: 140 },
+                { field: "email", headerName: "Email", flex: 1 }
+            ],
+            ventas: [
+                { field: "id_venta", headerName: "Folio", width: 100 },
+                { field: "cliente", headerName: "Cliente", flex: 1 },
+                { field: "fecha_venta", headerName: "Fecha", width: 170 },
+                { field: "metodo_pago", headerName: "Método Pago", width: 140 },
+                { field: "total", headerName: "Total ($)", width: 120, valueFormatter: p => `$${p.value?.toFixed(2)}` },
+                { field: "estado", headerName: "Estado", width: 120 }
+            ],
+            compras: [
+                { field: "id_compra", headerName: "ID Compra", width: 110 },
+                { field: "proveedor", headerName: "Proveedor", flex: 1 },
+                { field: "folio_factura", headerName: "Factura", width: 150 },
+                { field: "fecha_compra", headerName: "Fecha", width: 170 },
+                { field: "total", headerName: "Total ($)", width: 120, valueFormatter: p => `$${p.value?.toFixed(2)}` },
+                { field: "estado", headerName: "Estado", width: 120 }
+            ]
+        };
 
-  <script>
-    let gridApi = null;
+        // Metadatos de títulos
+        const titulosModulos = {
+            perfumes: { titulo: "Catálogo de Perfumes", sub: "Gestión de productos, precios y niveles de stock" },
+            marcas: { titulo: "Marcas", sub: "Catálogo de marcas registradas" },
+            familias: { titulo: "Familias Olfativas", sub: "Clasificación de esencias y notas olfativas" },
+            concentraciones: { titulo: "Concentraciones", sub: "Categorías de pureza (EDT, EDP, Parfum, etc.)" },
+            clientes: { titulo: "Catálogo de Clientes", sub: "Registro de clientes minoristas y mayoristas" },
+            proveedores: { titulo: "Directorio de Proveedores", sub: "Proveedores e importadores registrados" },
+            ventas: { titulo: "Histórico de Ventas", sub: "Registro de ventas generadas y facturadas" },
+            compras: { titulo: "Registro de Compras", sub: "Órdenes de compra y recepción de inventario" }
+        };
 
-    const columnDefs = [
-      { 
-        field: "imagen_url", 
-        headerName: "Imagen", 
-        width: 90,
-        cellRenderer: (p) => p.value ? `<img src="${p.value}" class="h-8 w-8 object-cover rounded shadow my-1">` : '📷'
-      },
-      { field: "sku", headerName: "SKU", width: 120 },
-      { field: "nombre", headerName: "Nombre del Perfume", flex: 1 },
-      { field: "genero", headerName: "Género", width: 120 },
-      { field: "precio_venta", headerName: "Precio Venta", width: 130, valueFormatter: p => `$${p.value}` },
-      {
-        headerName: "Acciones",
-        width: 120,
-        cellRenderer: (params) => {
-          window[`perfume_${params.data.id_perfume}`] = params.data;
-          return `
-            <button onclick='abrirModalEditar(${params.data.id_perfume})' class="text-blue-600 hover:text-blue-800 mr-2">✏️</button>
-            <button onclick="eliminarPerfume(${params.data.id_perfume})" class="text-red-600 hover:text-red-800">🗑️</button>
-          `;
+        // Inicializar AG Grid al cargar la página
+        document.addEventListener('DOMContentLoaded', () => {
+            const gridDiv = document.querySelector('#myGrid');
+            const gridOptions = {
+                columnDefs: configuracionColumnas.perfumes,
+                rowData: [],
+                pagination: true,
+                paginationPageSize: 15,
+                defaultColDef: {
+                    sortable: true,
+                    resizable: true
+                }
+            };
+            gridApi = agGrid.createGrid(gridDiv, gridOptions);
+            cargarModulo('perfumes');
+        });
+
+        // Función para cambiar dinámicamente entre catálogos
+        async function cargarModulo(nombreModulo) {
+            moduloActual = nombreModulo;
+
+            // Actualizar Títulos de la pantalla
+            const meta = titulosModulos[nombreModulo] || { titulo: nombreModulo, sub: "" };
+            document.getElementById('titulo-modulo').innerText = meta.titulo;
+            document.getElementById('subtitulo-modulo').innerText = meta.sub;
+
+            // Cambiar la estructura de columnas en AG Grid
+            if (gridApi) {
+                gridApi.setGridOption('columnDefs', configuracionColumnas[nombreModulo]);
+                gridApi.showLoadingOverlay();
+            }
+
+            // Consultar datos al backend en Rust (Axum)
+            try {
+                const response = await fetch(`/api/catalogos/${nombreModulo}`);
+                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+                const data = await response.json();
+                gridApi.setGridOption('rowData', data);
+            } catch (error) {
+                console.error(`Error al cargar ${nombreModulo}:`, error);
+                if (gridApi) gridApi.setGridOption('rowData', []);
+            }
         }
-      }
-    ];
 
-    async function cargarPerfumes() {
-      try {
-        const res = await fetch('/api/catalogos/perfumes');
-        const data = await res.json();
-        
-        if (gridApi) {
-          gridApi.setGridOption('rowData', data);
-        } else {
-          const gridDiv = document.querySelector('#gridContainer');
-          gridApi = agGrid.createGrid(gridDiv, {
-            columnDefs: columnDefs,
-            rowData: data,
-            pagination: true
-          });
+        function recargarDatos() {
+            cargarModulo(moduloActual);
         }
-
-        const mobileDiv = document.getElementById('mobileContainer');
-        mobileDiv.innerHTML = data.map(p => `
-          <div class="bg-white p-4 rounded-lg shadow border border-gray-100 flex justify-between items-center">
-            <div>
-              <h4 class="font-bold text-gray-900">${p.nombre}</h4>
-              <p class="text-xs text-gray-500">${p.sku} | ${p.genero}</p>
-              <p class="text-sm font-semibold text-emerald-600 mt-1">$${p.precio_venta}</p>
-            </div>
-            <div class="flex gap-2">
-              <button onclick="abrirModalEditar(${p.id_perfume})" class="p-2 text-blue-600">✏️</button>
-              <button onclick="eliminarPerfume(${p.id_perfume})" class="p-2 text-red-600">🗑️</button>
-            </div>
-          </div>
-        `).join('');
-      } catch (err) {
-        console.error("Error cargando perfumes:", err);
-      }
-    }
-
-    async function guardarPerfume(e) {
-      e.preventDefault();
-      const id = document.getElementById('id_perfume').value;
-      const body = {
-        sku: document.getElementById('sku').value,
-        nombre: document.getElementById('nombre').value,
-        genero: document.getElementById('genero').value,
-        precio_costo: parseFloat(document.getElementById('precio_costo').value),
-        precio_venta: parseFloat(document.getElementById('precio_venta').value),
-        imagen_url: document.getElementById('imagen_url').value || null
-      };
-
-      const url = id ? `/api/catalogos/perfumes/${id}` : '/api/catalogos/perfumes';
-      const method = id ? 'PUT' : 'POST';
-
-      await fetch(url, {
-        method: method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-
-      cerrarModal();
-      cargarPerfumes();
-    }
-
-    async function eliminarPerfume(id) {
-      if (confirm('¿Deseas eliminar este perfume?')) {
-        await fetch(`/api/catalogos/perfumes/${id}`, { method: 'DELETE' });
-        cargarPerfumes();
-      }
-    }
-
-    function abrirModalNuevo() {
-      document.getElementById('perfumeForm').reset();
-      document.getElementById('id_perfume').value = '';
-      document.getElementById('modalTitulo').innerText = 'Nuevo Perfume';
-      document.getElementById('modalPerfume').classList.remove('hidden');
-      document.getElementById('modalPerfume').classList.add('flex');
-    }
-
-    function abrirModalEditar(id) {
-      const p = window[`perfume_${id}`];
-      if (!p) return;
-      document.getElementById('id_perfume').value = p.id_perfume;
-      document.getElementById('sku').value = p.sku;
-      document.getElementById('nombre').value = p.nombre;
-      document.getElementById('genero').value = p.genero;
-      document.getElementById('precio_costo').value = p.precio_costo;
-      document.getElementById('precio_venta').value = p.precio_venta;
-      document.getElementById('imagen_url').value = p.imagen_url || '';
-      document.getElementById('modalTitulo').innerText = 'Editar Perfume';
-      document.getElementById('modalPerfume').classList.remove('hidden');
-      document.getElementById('modalPerfume').classList.add('flex');
-    }
-
-    function cerrarModal() {
-      document.getElementById('modalPerfume').classList.add('hidden');
-      document.getElementById('modalPerfume').classList.remove('flex');
-    }
-
-    document.addEventListener('DOMContentLoaded', cargarPerfumes);
-  </script>
+    </script>
 </body>
 </html>
