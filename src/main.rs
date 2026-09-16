@@ -1,7 +1,7 @@
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    routing::{delete, get, post, put},
+    routing::{get, put},
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
@@ -34,7 +34,7 @@ pub struct CrearPerfume {
 
 #[tokio::main]
 async fn main() {
-    // 1. Conexión a Base de Datos (PostgreSQL via DATABASE_URL)
+    // 1. Conexión a Base de Datos (PostgreSQL vía DATABASE_URL)
     let database_url = std::env::var("DATABASE_URL")
         .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/perfumeria_db".to_string());
 
@@ -44,19 +44,19 @@ async fn main() {
         .await
         .expect("No se pudo conectar a PostgreSQL");
 
-    // 2. Rutas de la API (CRUD)
+    // 2. Rutas del API (Sin anteponer /api internamente)
     let api_routes = Router::new()
-        .route("/api/catalogos/perfumes", get(obtener_perfumes).post(crear_perfume))
-        .route("/api/catalogos/perfumes/:id", put(actualizar_perfume).delete(eliminar_perfume))
-        .with_state(pool);
+        .route("/catalogos/perfumes", get(obtener_perfumes).post(crear_perfume))
+        .route("/catalogos/perfumes/:id", put(actualizar_perfume).delete(eliminar_perfume));
 
     // 3. Router Principal y Archivos Estáticos
     let app = Router::new()
-        .nest("", api_routes)
+        .nest("/api", api_routes) // El prefijo /api se aplica aquí para todo el grupo
+        .nest_service("/public", ServeDir::new("public"))
         .route_service("/", ServeFile::new("public/index.html"))
-        .fallback_service(ServeDir::new("public"));
+        .with_state(pool);
 
-    // 4. Servidor en Puerto Dynamic (Render / Local)
+    // 4. Servidor en Puerto Dinámico (Render / Local)
     let port_str = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
     let port: u16 = port_str.parse().expect("PORT debe ser un número válido");
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
