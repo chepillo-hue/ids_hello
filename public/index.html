@@ -5,18 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ERP Perfumería - Sistema de Gestión</title>
 
-    <!-- Tailwind CSS (Estilos) -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- AG Grid Community CSS + JS -->
+    <!-- AG Grid Community -->
     <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
+
+    <!-- Swiper.js (CSS y JS para Carrusel) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 
     <!-- FontAwesome (Iconos) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        .swiper-button-next, .swiper-button-prev {
+            color: #ec4899 !important; /* Color Rosa Perfumería */
+        }
+        .swiper-pagination-bullet-active {
+            background-color: #ec4899 !important;
+        }
+    </style>
 </head>
 <body class="bg-gray-100 font-sans h-screen flex flex-col">
 
-    <!-- 1. BARRA SUPERIOR DE NAVEGACIÓN (HEADER) -->
+    <!-- 1. BARRA SUPERIOR DE NAVEGACIÓN -->
     <header class="bg-slate-900 text-white shadow-md">
         <div class="container mx-auto px-4 py-3 flex justify-between items-center">
             <div class="flex items-center space-x-3">
@@ -39,7 +52,6 @@
                         <span>Catálogos Base</span>
                         <i class="fa-solid fa-chevron-down text-xs ml-1 opacity-70"></i>
                     </button>
-                    <!-- Submenú desplegable -->
                     <div class="absolute left-0 top-full hidden group-hover:block w-48 bg-white text-gray-800 shadow-xl rounded-b border z-50">
                         <a href="#" onclick="cargarModulo('marcas')" class="block px-4 py-2 hover:bg-gray-100 flex items-center space-x-2">
                             <i class="fa-solid fa-tags text-indigo-500 w-4"></i><span>Marcas</span>
@@ -59,7 +71,7 @@
                     <span>Perfumes / Productos</span>
                 </button>
 
-                <!-- GRUPO: TERCEROS (CLIENTES Y PROVEEDORES) -->
+                <!-- GRUPO: CONTACTOS -->
                 <div class="relative group">
                     <button class="flex items-center space-x-2 px-4 py-3 hover:bg-slate-700 text-slate-200 focus:outline-none">
                         <i class="fa-solid fa-users text-emerald-400"></i>
@@ -94,32 +106,65 @@
     <!-- 2. ÁREA PRINCIPAL DE CONTENIDO -->
     <main class="flex-1 p-4 flex flex-col container mx-auto">
 
-        <!-- ENCABEZADO DEL MÓDULO ACTIVO -->
+        <!-- ENCABEZADO DEL MÓDULO ACTIVO + TOGGLE DE VISTA -->
         <div class="bg-white p-4 rounded-t-lg border-b border-gray-200 flex justify-between items-center shadow-sm">
             <div>
                 <h2 id="titulo-modulo" class="text-xl font-bold text-gray-800">Perfumes / Productos</h2>
                 <p id="subtitulo-modulo" class="text-xs text-gray-500">Listado completo de productos registrados</p>
             </div>
-            <div class="flex space-x-2">
+            
+            <div class="flex items-center space-x-3">
+                <!-- Selector de Vista (Tabla vs Carrusel) -->
+                <div class="bg-gray-100 p-1 rounded-lg border flex space-x-1">
+                    <button id="btn-vista-tabla" onclick="cambiarTipoVista('tabla')" class="px-3 py-1 rounded text-xs font-bold bg-white text-slate-800 shadow-sm flex items-center space-x-1">
+                        <i class="fa-solid fa-table"></i>
+                        <span>Tabla</span>
+                    </button>
+                    <button id="btn-vista-carrusel" onclick="cambiarTipoVista('carrusel')" class="px-3 py-1 rounded text-xs font-bold text-gray-500 hover:text-slate-800 flex items-center space-x-1">
+                        <i class="fa-solid fa-images"></i>
+                        <span>Carrusel</span>
+                    </button>
+                </div>
+
                 <button onclick="recargarDatos()" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm font-medium flex items-center space-x-1">
                     <i class="fa-solid fa-rotate-right"></i>
-                    <span>Actualizar</span>
                 </button>
             </div>
         </div>
 
-        <!-- CONTENEDOR DE LA TABLA (AG GRID) -->
-        <div class="flex-1 bg-white rounded-b-lg shadow-sm p-2 flex flex-col">
-            <div id="myGrid" class="ag-theme-alpine w-full h-full" style="min-height: 450px;"></div>
+        <!-- CONTENEDORES DE INTERFAZ -->
+        <div class="flex-1 bg-white rounded-b-lg shadow-sm p-4 flex flex-col relative overflow-hidden">
+            
+            <!-- VISTA A: TABLA (AG GRID) -->
+            <div id="contenedor-tabla" class="w-full h-full">
+                <div id="myGrid" class="ag-theme-alpine w-full h-full" style="min-height: 450px;"></div>
+            </div>
+
+            <!-- VISTA B: CARRUSEL (SWIPER.JS) -->
+            <div id="contenedor-carrusel" class="w-full h-full hidden flex items-center justify-center">
+                <div class="swiper mySwiper w-full py-4">
+                    <div class="swiper-wrapper" id="swiper-wrapper-cards">
+                        <!-- Las tarjetas se generan dinámicamente -->
+                    </div>
+                    <!-- Paginación y flechas del Swiper -->
+                    <div class="swiper-button-next"></div>
+                    <div class="swiper-button-prev"></div>
+                    <div class="swiper-pagination"></div>
+                </div>
+            </div>
+
         </div>
     </main>
 
     <!-- 3. LÓGICA DE JAVASCRIPT -->
     <script>
         let gridApi = null;
+        let swiperInstance = null;
         let moduloActual = 'perfumes';
+        let datosCargados = [];
+        let vistaActual = 'tabla'; // 'tabla' o 'carrusel'
 
-        // Definición de columnas por cada catálogo
+        // Configuración de columnas para AG Grid
         const configuracionColumnas = {
             perfumes: [
                 { field: "sku", headerName: "SKU", width: 110 },
@@ -180,7 +225,6 @@
             ]
         };
 
-        // Metadatos de títulos
         const titulosModulos = {
             perfumes: { titulo: "Catálogo de Perfumes", sub: "Gestión de productos, precios y niveles de stock" },
             marcas: { titulo: "Marcas", sub: "Catálogo de marcas registradas" },
@@ -192,7 +236,7 @@
             compras: { titulo: "Registro de Compras", sub: "Órdenes de compra y recepción de inventario" }
         };
 
-        // Inicializar AG Grid al cargar la página
+        // Inicializar aplicación
         document.addEventListener('DOMContentLoaded', () => {
             const gridDiv = document.querySelector('#myGrid');
             const gridOptions = {
@@ -200,40 +244,129 @@
                 rowData: [],
                 pagination: true,
                 paginationPageSize: 15,
-                defaultColDef: {
-                    sortable: true,
-                    resizable: true
-                }
+                defaultColDef: { sortable: true, resizable: true }
             };
             gridApi = agGrid.createGrid(gridDiv, gridOptions);
             cargarModulo('perfumes');
         });
 
-        // Función para cambiar dinámicamente entre catálogos
+        // Alternar entre modo Tabla y Carrusel
+        function cambiarTipoVista(tipo) {
+            vistaActual = tipo;
+            const tabTabla = document.getElementById('contenedor-tabla');
+            const tabCarrusel = document.getElementById('contenedor-carrusel');
+            const btnTabla = document.getElementById('btn-vista-tabla');
+            const btnCarrusel = document.getElementById('btn-vista-carrusel');
+
+            if (tipo === 'tabla') {
+                tabTabla.classList.remove('hidden');
+                tabCarrusel.classList.add('hidden');
+                btnTabla.className = "px-3 py-1 rounded text-xs font-bold bg-white text-slate-800 shadow-sm flex items-center space-x-1";
+                btnCarrusel.className = "px-3 py-1 rounded text-xs font-bold text-gray-500 hover:text-slate-800 flex items-center space-x-1";
+            } else {
+                tabTabla.classList.add('hidden');
+                tabCarrusel.classList.remove('hidden');
+                btnCarrusel.className = "px-3 py-1 rounded text-xs font-bold bg-white text-slate-800 shadow-sm flex items-center space-x-1";
+                btnTabla.className = "px-3 py-1 rounded text-xs font-bold text-gray-500 hover:text-slate-800 flex items-center space-x-1";
+                renderizarCarrusel(datosCargados);
+            }
+        }
+
+        // Consultar catálogo dinámico al backend Axum
         async function cargarModulo(nombreModulo) {
             moduloActual = nombreModulo;
 
-            // Actualizar Títulos de la pantalla
             const meta = titulosModulos[nombreModulo] || { titulo: nombreModulo, sub: "" };
             document.getElementById('titulo-modulo').innerText = meta.titulo;
             document.getElementById('subtitulo-modulo').innerText = meta.sub;
 
-            // Cambiar la estructura de columnas en AG Grid
             if (gridApi) {
                 gridApi.setGridOption('columnDefs', configuracionColumnas[nombreModulo]);
                 gridApi.showLoadingOverlay();
             }
 
-            // Consultar datos al backend en Rust (Axum)
             try {
                 const response = await fetch(`/api/catalogos/${nombreModulo}`);
                 if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
-                const data = await response.json();
-                gridApi.setGridOption('rowData', data);
+                datosCargados = await response.json();
+                
+                gridApi.setGridOption('rowData', datosCargados);
+
+                if (vistaActual === 'carrusel') {
+                    renderizarCarrusel(datosCargados);
+                }
             } catch (error) {
                 console.error(`Error al cargar ${nombreModulo}:`, error);
+                datosCargados = [];
                 if (gridApi) gridApi.setGridOption('rowData', []);
             }
+        }
+
+        // Construir Carrusel dinámico mediante Swiper.js
+        function renderizarCarrusel(datos) {
+            const wrapper = document.getElementById('swiper-wrapper-cards');
+            wrapper.innerHTML = '';
+
+            if (!datos || datos.length === 0) {
+                wrapper.innerHTML = `<div class="p-8 text-center text-gray-400 w-full">Sin registros disponibles</div>`;
+                return;
+            }
+
+            datos.forEach(item => {
+                let cardHTML = '';
+
+                if (moduloActual === 'perfumes') {
+                    cardHTML = `
+                        <div class="swiper-slide bg-white border border-gray-200 rounded-2xl p-4 shadow-md hover:shadow-lg transition-all flex flex-col items-center">
+                            <div class="h-44 w-full flex items-center justify-center bg-gray-50 rounded-xl mb-3 overflow-hidden">
+                                <img src="${item.imagen_url || 'https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=300'}" class="h-36 object-contain hover:scale-105 transition-transform" />
+                            </div>
+                            <span class="text-[10px] font-bold tracking-wider text-pink-600 uppercase bg-pink-50 px-2 py-0.5 rounded-full mb-1">${item.marca || 'Perfume'}</span>
+                            <h3 class="font-bold text-gray-800 text-sm text-center line-clamp-1">${item.nombre}</h3>
+                            <p class="text-xs text-gray-500 mb-3">${item.concentracion || ''} · ${item.genero || ''}</p>
+                            <div class="mt-auto flex justify-between items-center w-full pt-2 border-t border-gray-100">
+                                <span class="text-base font-extrabold text-slate-800">$${item.precio_venta?.toFixed(2)}</span>
+                                <span class="text-xs ${item.stock < 10 ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-700'} px-2 py-0.5 rounded-full font-semibold">Stock: ${item.stock}</span>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Tarjetas para otros catálogos (Marcas, Clientes, Ventas, etc.)
+                    const titulo = item.nombre || item.razon_social || item.cliente || item.proveedor || `Folio #${item.id_venta || item.id_compra}`;
+                    const subtitulo = item.pais_origen || item.email || item.fecha_venta || item.fecha_compra || item.siglas || '';
+                    const extra = item.total ? `$${item.total.toFixed(2)}` : (item.tipo || item.rfc || '');
+
+                    cardHTML = `
+                        <div class="swiper-slide bg-gradient-to-br from-slate-800 to-slate-900 text-white rounded-2xl p-6 shadow-md flex flex-col justify-between h-56">
+                            <div>
+                                <i class="fa-solid fa-layer-group text-pink-500 text-2xl mb-3"></i>
+                                <h3 class="font-bold text-lg leading-snug line-clamp-2">${titulo}</h3>
+                                <p class="text-xs text-slate-400 mt-1">${subtitulo}</p>
+                            </div>
+                            <div class="pt-3 border-t border-slate-700/60 flex justify-between items-center">
+                                <span class="text-xs text-pink-400 font-semibold">${moduloActual.toUpperCase()}</span>
+                                <span class="text-sm font-bold bg-slate-800 px-3 py-1 rounded-lg border border-slate-700">${extra}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                wrapper.innerHTML += cardHTML;
+            });
+
+            // Re-inicializar instancia de Swiper
+            if (swiperInstance) swiperInstance.destroy();
+            swiperInstance = new Swiper('.mySwiper', {
+                slidesPerView: 1,
+                spaceBetween: 20,
+                pagination: { el: '.swiper-pagination', clickable: true },
+                navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
+                breakpoints: {
+                    640: { slidesPerView: 2 },
+                    768: { slidesPerView: 3 },
+                    1024: { slidesPerView: 4 }
+                }
+            });
         }
 
         function recargarDatos() {
