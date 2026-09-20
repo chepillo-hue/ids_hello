@@ -3,466 +3,253 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ERP Perfumería - Sistema de Gestión</title>
+    <title>Formulario Transaccional API - Efectos Especiales</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- AG Grid Community -->
-    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
-
-    <!-- Swiper.js -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
-    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        .swiper-button-next, .swiper-button-prev { color: #ec4899 !important; }
-        .swiper-pagination-bullet-active { background-color: #ec4899 !important; }
-        
-        /* Transiciones suaves para menú lateral y submenús acordeón */
-        .drawer-transition {
-            transition: transform 0.3s ease-in-out;
-        }
-        .accordion-content {
-            max-height: 0;
+        /* --- 1. EFECTO BORDES BRILANTES Y NEÓN (GLOW CARD) --- */
+        .glow-card {
+            position: relative;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(16px);
+            border-radius: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
             overflow: hidden;
-            transition: max-height 0.3s ease-out;
         }
-        .accordion-content.open {
-            max-height: 300px;
+
+        .glow-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(from 0deg, transparent 0deg 340deg, #ec4899 360deg);
+            animation: rotateGlow 6s linear infinite;
+            z-index: -2;
         }
-        .rotate-chevron {
-            transition: transform 0.2s ease;
+
+        .glow-card::after {
+            content: '';
+            position: absolute;
+            inset: 2px;
+            background: #0f172a;
+            border-radius: 1.4rem;
+            z-index: -1;
         }
-        .rotate-chevron.open {
-            transform: rotate(180deg);
+
+        @keyframes rotateGlow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* --- 2. MICROANIMACIÓN DE ERROR (SHAKE) --- */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+        .shake-animation {
+            animation: shake 0.4s ease-in-out;
+        }
+
+        /* --- 3. TOAST NOTIFICATION SLIDE --- */
+        @keyframes toastIn {
+            from { transform: translateY(100%) scale(0.9); opacity: 0; }
+            to { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        .toast-animate {
+            animation: toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
     </style>
 </head>
-<body class="bg-slate-900 font-sans h-screen flex flex-col overflow-hidden">
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex items-center justify-center p-4">
 
-    <!-- 1. BARRA SUPERIOR DE ENCABEZADO -->
-    <header class="bg-slate-950 text-white shadow-md border-b border-slate-800 z-30 flex-shrink-0">
-        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
-            
-            <div class="flex items-center space-x-3">
-                <!-- Botón Hamburguesa para abrir el Menú Lateral -->
-                <button onclick="toggleMenu()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-pink-500 focus:outline-none transition-colors">
-                    <i class="fa-solid fa-bars text-xl"></i>
-                </button>
-
-                <div class="flex items-center space-x-2">
-                    <i class="fa-solid fa-bottle-droplet text-pink-500 text-xl"></i>
-                    <h1 class="text-lg font-bold tracking-wide hidden sm:block">Perfumería ERP</h1>
-                </div>
-            </div>
-
-            <div class="flex items-center space-x-3">
-                <span class="text-xs bg-slate-900 text-slate-300 px-3 py-1.5 rounded-full border border-slate-800 flex items-center">
-                    <i class="fa-solid fa-database text-green-400 mr-1.5"></i> PostgreSQL Online
-                </span>
-            </div>
-        </div>
-    </header>
-
-    <!-- 2. OVERLAY (Fondo Oscuro para cerrar menú) -->
-    <div id="drawer-overlay" onclick="toggleMenu()" class="fixed inset-0 bg-black/60 z-40 hidden transition-opacity"></div>
-
-    <!-- 3. MENÚ LATERAL DINÁMICO (Estilo Imagen) -->
-    <aside id="drawer-menu" class="fixed top-0 left-0 h-full w-80 bg-slate-900 text-slate-200 z-50 transform -translate-x-full drawer-transition flex flex-col shadow-2xl border-r border-slate-800">
+    <!-- CONTENEDOR PRINCIPAL CON EFECTO DE LUZ -->
+    <div id="card-container" class="glow-card w-full max-w-lg p-6 sm:p-8 shadow-2xl transition-all">
         
-        <!-- ENCABEZADO Y BUSCADOR INTEGRADO -->
-        <div class="p-4 border-b border-slate-800 space-y-3">
-            <div class="flex justify-between items-center">
-                <div class="flex items-center space-x-2 text-pink-500 font-bold">
-                    <i class="fa-solid fa-layer-group"></i>
-                    <span>Navegación ERP</span>
+        <!-- ENCABEZADO -->
+        <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-pink-500/10 border border-pink-500/30 flex items-center justify-center text-pink-500 text-lg">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
                 </div>
-                <button onclick="toggleMenu()" class="text-slate-400 hover:text-white p-1">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
+                <div>
+                    <h2 class="text-lg font-bold text-white">Nuevo Producto / Perfume</h2>
+                    <p class="text-xs text-slate-400">Transacción POST directa a la API</p>
+                </div>
             </div>
-
-            <!-- Buscador dentro del menú -->
-            <div class="relative">
-                <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-sm"></i>
-                <input type="text" id="input-busqueda-menu" onkeyup="filtrarMenu()" placeholder="Buscar en menú..." 
-                    class="w-full pl-9 pr-3 py-1.5 bg-slate-800 text-slate-200 rounded-lg text-sm border border-slate-700 focus:outline-none focus:border-pink-500">
-            </div>
+            <span class="text-[10px] uppercase font-mono tracking-wider bg-pink-500/20 text-pink-400 border border-pink-500/30 px-2.5 py-1 rounded-full">
+                Live API
+            </span>
         </div>
 
-        <!-- LISTADO DE OPCIONES DINÁMICAS (ACORDEÓN) -->
-        <div class="flex-1 overflow-y-auto p-3 space-y-1 text-sm font-medium" id="lista-menu">
-
-            <!-- GRUPO: INVENTARIO / PRODUCTOS (Directo) -->
-            <button onclick="seleccionarOpcion('perfumes')" class="opcion-menu w-full flex items-center justify-between p-3 rounded-lg hover:bg-slate-800 text-slate-200 transition-colors">
-                <div class="flex items-center space-x-3">
-                    <i class="fa-solid fa-boxes-stacked text-blue-400 w-5"></i>
-                    <span>Perfumes / Productos</span>
-                </div>
-            </button>
-
-            <!-- GRUPO: CATÁLOGOS BASE (Desplegable) -->
-            <div>
-                <button onclick="toggleAcordeon('acc-catalogos', 'icon-catalogos')" class="w-full flex items-center justify-between p-3 rounded-lg hover:bg-slate-800 text-slate-200 transition-colors">
-                    <div class="flex items-center space-x-3">
-                        <i class="fa-solid fa-folder text-amber-400 w-5"></i>
-                        <span>Catálogos Base</span>
-                    </div>
-                    <i id="icon-catalogos" class="fa-solid fa-chevron-down text-xs text-slate-400 rotate-chevron"></i>
-                </button>
-                <div id="acc-catalogos" class="accordion-content pl-9 space-y-1 mt-1">
-                    <a href="#" onclick="seleccionarOpcion('marcas')" class="opcion-menu block py-2 px-3 rounded hover:bg-slate-800/80 text-slate-300 hover:text-white flex items-center space-x-2">
-                        <i class="fa-solid fa-tags text-indigo-400 w-4"></i><span>Marcas</span>
-                    </a>
-                    <a href="#" onclick="seleccionarOpcion('familias')" class="opcion-menu block py-2 px-3 rounded hover:bg-slate-800/80 text-slate-300 hover:text-white flex items-center space-x-2">
-                        <i class="fa-solid fa-layer-group text-purple-400 w-4"></i><span>Familias Olfativas</span>
-                    </a>
-                    <a href="#" onclick="seleccionarOpcion('concentraciones')" class="opcion-menu block py-2 px-3 rounded hover:bg-slate-800/80 text-slate-300 hover:text-white flex items-center space-x-2">
-                        <i class="fa-solid fa-vial text-teal-400 w-4"></i><span>Concentraciones</span>
-                    </a>
-                </div>
-            </div>
-
-            <!-- GRUPO: CONTACTOS (Desplegable) -->
-            <div>
-                <button onclick="toggleAcordeon('acc-contactos', 'icon-contactos')" class="w-full flex items-center justify-between p-3 rounded-lg hover:bg-slate-800 text-slate-200 transition-colors">
-                    <div class="flex items-center space-x-3">
-                        <i class="fa-solid fa-users text-emerald-400 w-5"></i>
-                        <span>Contactos</span>
-                    </div>
-                    <i id="icon-contactos" class="fa-solid fa-chevron-down text-xs text-slate-400 rotate-chevron"></i>
-                </button>
-                <div id="acc-contactos" class="accordion-content pl-9 space-y-1 mt-1">
-                    <a href="#" onclick="seleccionarOpcion('clientes')" class="opcion-menu block py-2 px-3 rounded hover:bg-slate-800/80 text-slate-300 hover:text-white flex items-center space-x-2">
-                        <i class="fa-solid fa-user-tag text-emerald-400 w-4"></i><span>Clientes</span>
-                    </a>
-                    <a href="#" onclick="seleccionarOpcion('proveedores')" class="opcion-menu block py-2 px-3 rounded hover:bg-slate-800/80 text-slate-300 hover:text-white flex items-center space-x-2">
-                        <i class="fa-solid fa-truck-field text-orange-400 w-4"></i><span>Proveedores</span>
-                    </a>
-                </div>
-            </div>
-
-            <!-- GRUPO: VENTAS (Directo) -->
-            <button onclick="seleccionarOpcion('ventas')" class="opcion-menu w-full flex items-center justify-between p-3 rounded-lg hover:bg-slate-800 text-slate-200 transition-colors">
-                <div class="flex items-center space-x-3">
-                    <i class="fa-solid fa-cart-shopping text-rose-400 w-5"></i>
-                    <span>Ventas</span>
-                </div>
-            </button>
-
-            <!-- GRUPO: COMPRAS (Directo) -->
-            <button onclick="seleccionarOpcion('compras')" class="opcion-menu w-full flex items-center justify-between p-3 rounded-lg hover:bg-slate-800 text-slate-200 transition-colors">
-                <div class="flex items-center space-x-3">
-                    <i class="fa-solid fa-bag-shopping text-cyan-400 w-5"></i>
-                    <span>Compras</span>
-                </div>
-            </button>
-
-        </div>
-
-        <!-- PIE DEL MENÚ -->
-        <div class="p-3 border-t border-slate-800 text-xs text-slate-500 text-center">
-            Sistema ERP v1.0
-        </div>
-    </aside>
-
-    <!-- 4. ÁREA PRINCIPAL DE TRABAJO -->
-    <main class="flex-1 p-3 sm:p-4 flex flex-col container mx-auto overflow-hidden">
-
-        <!-- ENCABEZADO DEL MÓDULO ACTIVO + VISTAS -->
-        <div class="bg-white p-3 sm:p-4 rounded-t-xl border-b border-gray-200 flex flex-wrap gap-2 justify-between items-center shadow-sm flex-shrink-0">
-            <div>
-                <h2 id="titulo-modulo" class="text-lg sm:text-xl font-bold text-slate-800">Perfumes / Productos</h2>
-                <p id="subtitulo-modulo" class="text-xs text-slate-500">Listado completo de productos registrados</p>
-            </div>
+        <!-- FORMULARIO TRANSACCIONAL -->
+        <form id="form-transaccion" onsubmit="enviarTransaccion(event)" class="space-y-4">
             
-            <div class="flex items-center space-x-2">
-                <!-- Toggle de Vista (Tabla vs Carrusel) -->
-                <div class="bg-slate-100 p-1 rounded-lg border flex space-x-1">
-                    <button id="btn-vista-tabla" onclick="cambiarTipoVista('tabla')" class="px-3 py-1 rounded text-xs font-bold bg-white text-slate-800 shadow-sm flex items-center space-x-1">
-                        <i class="fa-solid fa-table"></i>
-                        <span>Tabla</span>
-                    </button>
-                    <button id="btn-vista-carrusel" onclick="cambiarTipoVista('carrusel')" class="px-3 py-1 rounded text-xs font-bold text-slate-500 hover:text-slate-800 flex items-center space-x-1">
-                        <i class="fa-solid fa-images"></i>
-                        <span>Carrusel</span>
-                    </button>
+            <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Nombre del Perfume</label>
+                <div class="relative">
+                    <i class="fa-solid fa-bottle-droplet absolute left-3 top-3 text-slate-500 text-sm"></i>
+                    <input type="text" id="nombre" required placeholder="Ej. Sauvage Elixir" 
+                        class="w-full pl-9 pr-3 py-2 bg-slate-900/90 text-white rounded-xl border border-slate-700/80 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 text-sm focus:outline-none transition-all">
                 </div>
+            </div>
 
-                <button onclick="recargarDatos()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium">
-                    <i class="fa-solid fa-rotate-right"></i>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Marca</label>
+                    <input type="text" id="marca" required placeholder="Dior" 
+                        class="w-full px-3 py-2 bg-slate-900/90 text-white rounded-xl border border-slate-700/80 focus:border-pink-500 text-sm focus:outline-none transition-all">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Concentración</label>
+                    <select id="concentracion" class="w-full px-3 py-2 bg-slate-900/90 text-white rounded-xl border border-slate-700/80 focus:border-pink-500 text-sm focus:outline-none transition-all">
+                        <option value="Parfum">Parfum</option>
+                        <option value="Eau de Parfum">Eau de Parfum</option>
+                        <option value="Eau de Toilette">Eau de Toilette</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Precio Venta ($)</label>
+                    <input type="number" step="0.01" id="precio_venta" required placeholder="120.00" 
+                        class="w-full px-3 py-2 bg-slate-900/90 text-white rounded-xl border border-slate-700/80 focus:border-pink-500 text-sm focus:outline-none transition-all">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Stock Inicial</label>
+                    <input type="number" id="stock" required placeholder="15" 
+                        class="w-full px-3 py-2 bg-slate-900/90 text-white rounded-xl border border-slate-700/80 focus:border-pink-500 text-sm focus:outline-none transition-all">
+                </div>
+            </div>
+
+            <!-- BOTÓN MULTI-ESTADO ANIMADO -->
+            <div class="pt-3">
+                <button type="submit" id="btn-submit" 
+                    class="w-full relative py-3 px-4 bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 hover:from-pink-600 hover:to-rose-600 text-white font-bold text-sm rounded-xl shadow-lg shadow-pink-500/25 transition-all duration-300 flex items-center justify-center space-x-2 overflow-hidden">
+                    
+                    <!-- Icono / Spinner -->
+                    <span id="btn-icon">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </span>
+                    <span id="btn-text">Registrar Transacción</span>
                 </button>
             </div>
-        </div>
+        </form>
+    </div>
 
-        <!-- CONTENEDOR VISTAS -->
-        <div class="flex-1 bg-white rounded-b-xl shadow-sm p-2 sm:p-4 flex flex-col relative overflow-hidden">
-            
-            <!-- VISTA TABLA (AG GRID) -->
-            <div id="contenedor-tabla" class="w-full h-full">
-                <div id="myGrid" class="ag-theme-alpine w-full h-full" style="min-height: 400px;"></div>
-            </div>
+    <!-- TOAST NOTIFICATION FLOTANTE (ESTILO SONNER) -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2"></div>
 
-            <!-- VISTA CARRUSEL (SWIPER) -->
-            <div id="contenedor-carrusel" class="w-full h-full hidden flex items-center justify-center">
-                <div class="swiper mySwiper w-full py-4">
-                    <div class="swiper-wrapper" id="swiper-wrapper-cards"></div>
-                    <div class="swiper-button-next"></div>
-                    <div class="swiper-button-prev"></div>
-                    <div class="swiper-pagination"></div>
-                </div>
-            </div>
-
-        </div>
-    </main>
-
-    <!-- 5. LÓGICA DE JAVASCRIPT -->
+    <!-- LÓGICA DE TRANSACCIÓN Y EFECTOS -->
     <script>
-        let gridApi = null;
-        let swiperInstance = null;
-        let moduloActual = 'perfumes';
-        let datosCargados = [];
-        let vistaActual = 'tabla';
+        async function enviarTransaccion(event) {
+            event.preventDefault();
 
-        // Mapeo de Columnas
-        const configuracionColumnas = {
-            perfumes: [
-                { field: "sku", headerName: "SKU", width: 110 },
-                { field: "nombre", headerName: "Perfume", flex: 1, filter: true },
-                { field: "genero", headerName: "Género", width: 120 },
-                { field: "marca", headerName: "Marca", width: 130 },
-                { field: "familia", headerName: "Familia Olfativa", flex: 1 },
-                { field: "concentracion", headerName: "Concentración", width: 140 },
-                { field: "precio_costo", headerName: "Costo ($)", width: 110, valueFormatter: p => `$${p.value?.toFixed(2)}` },
-                { field: "precio_venta", headerName: "Venta ($)", width: 110, valueFormatter: p => `$${p.value?.toFixed(2)}` },
-                { field: "stock", headerName: "Stock", width: 90, cellClass: p => p.value < 10 ? 'text-red-600 font-bold' : 'text-green-600' }
-            ],
-            marcas: [
-                { field: "id_marca", headerName: "ID", width: 90 },
-                { field: "nombre", headerName: "Nombre de la Marca", flex: 1, filter: true },
-                { field: "pais_origen", headerName: "País de Origen", flex: 1 }
-            ],
-            familias: [
-                { field: "id_familia", headerName: "ID", width: 90 },
-                { field: "nombre", headerName: "Familia Olfativa", width: 200 },
-                { field: "descripcion", headerName: "Descripción", flex: 1 }
-            ],
-            concentraciones: [
-                { field: "id_concentracion", headerName: "ID", width: 90 },
-                { field: "nombre", headerName: "Nombre Concentración", flex: 1 },
-                { field: "siglas", headerName: "Siglas", width: 120 }
-            ],
-            clientes: [
-                { field: "id_cliente", headerName: "ID", width: 90 },
-                { field: "nombre", headerName: "Cliente", flex: 1, filter: true },
-                { field: "telefono", headerName: "Teléfono", width: 150 },
-                { field: "email", headerName: "Email", flex: 1 },
-                { field: "tipo", headerName: "Tipo Cliente", width: 130 }
-            ],
-            proveedores: [
-                { field: "id_proveedor", headerName: "ID", width: 90 },
-                { field: "razon_social", headerName: "Razón Social / Proveedor", flex: 1, filter: true },
-                { field: "rfc", headerName: "RFC", width: 140 },
-                { field: "contacto", headerName: "Contacto", width: 160 },
-                { field: "telefono", headerName: "Teléfono", width: 140 },
-                { field: "email", headerName: "Email", flex: 1 }
-            ],
-            ventas: [
-                { field: "id_venta", headerName: "Folio", width: 100 },
-                { field: "cliente", headerName: "Cliente", flex: 1 },
-                { field: "fecha_venta", headerName: "Fecha", width: 170 },
-                { field: "metodo_pago", headerName: "Método Pago", width: 140 },
-                { field: "total", headerName: "Total ($)", width: 120, valueFormatter: p => `$${p.value?.toFixed(2)}` },
-                { field: "estado", headerName: "Estado", width: 120 }
-            ],
-            compras: [
-                { field: "id_compra", headerName: "ID Compra", width: 110 },
-                { field: "proveedor", headerName: "Proveedor", flex: 1 },
-                { field: "folio_factura", headerName: "Factura", width: 150 },
-                { field: "fecha_compra", headerName: "Fecha", width: 170 },
-                { field: "total", headerName: "Total ($)", width: 120, valueFormatter: p => `$${p.value?.toFixed(2)}` },
-                { field: "estado", headerName: "Estado", width: 120 }
-            ]
-        };
+            const btn = document.getElementById('btn-submit');
+            const btnIcon = document.getElementById('btn-icon');
+            const btnText = document.getElementById('btn-text');
+            const card = document.getElementById('card-container');
 
-        const titulosModulos = {
-            perfumes: { titulo: "Catálogo de Perfumes", sub: "Gestión de productos, precios y niveles de stock" },
-            marcas: { titulo: "Marcas", sub: "Catálogo de marcas registradas" },
-            familias: { titulo: "Familias Olfativas", sub: "Clasificación de esencias y notas olfativas" },
-            concentraciones: { titulo: "Concentraciones", sub: "Categorías de pureza (EDT, EDP, Parfum, etc.)" },
-            clientes: { titulo: "Catálogo de Clientes", sub: "Registro de clientes minoristas y mayoristas" },
-            proveedores: { titulo: "Directorio de Proveedores", sub: "Proveedores e importadores registrados" },
-            ventas: { titulo: "Histórico de Ventas", sub: "Registro de ventas generadas y facturadas" },
-            compras: { titulo: "Registro de Compras", sub: "Órdenes de compra y recepción de inventario" }
-        };
+            // Payload para la API
+            const payload = {
+                sku: "SKU-" + Math.floor(1000 + Math.random() * 9000),
+                nombre: document.getElementById('nombre').value,
+                marca: document.getElementById('marca').value,
+                genero: "Unisex",
+                familia: "Cítrica / Amaderada",
+                concentracion: document.getElementById('concentracion').value,
+                precio_costo: parseFloat(document.getElementById('precio_venta').value) * 0.6,
+                precio_venta: parseFloat(document.getElementById('precio_venta').value),
+                stock: parseInt(document.getElementById('stock').value)
+            };
 
-        // --- CONTROL DEL MENÚ LATERAL ---
-        function toggleMenu() {
-            const drawer = document.getElementById('drawer-menu');
-            const overlay = document.getElementById('drawer-overlay');
-            const isOpen = !drawer.classList.contains('-translate-x-full');
+            // 1. ESTADO: CARGANDO (Transición en botón)
+            btn.disabled = true;
+            btn.className = "w-full py-3 px-4 bg-slate-800 text-pink-400 font-bold text-sm rounded-xl border border-pink-500/40 flex items-center justify-center space-x-2 transition-all cursor-wait";
+            btnIcon.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i>`;
+            btnText.innerText = "Procesando en API...";
 
-            if (isOpen) {
-                drawer.classList.add('-translate-x-full');
-                overlay.classList.add('hidden');
-            } else {
-                drawer.classList.remove('-translate-x-full');
-                overlay.classList.remove('hidden');
-            }
-        }
-
-        function toggleAcordeon(idAcc, idIcon) {
-            const content = document.getElementById(idAcc);
-            const icon = document.getElementById(idIcon);
-            content.classList.toggle('open');
-            icon.classList.toggle('open');
-        }
-
-        function seleccionarOpcion(modulo) {
-            cargarModulo(modulo);
-            toggleMenu(); // Cierra el menú tras elegir opción
-        }
-
-        function filtrarMenu() {
-            const input = document.getElementById('input-busqueda-menu').value.toLowerCase();
-            const opciones = document.querySelectorAll('.opcion-menu');
-
-            opciones.forEach(op => {
-                const texto = op.innerText.toLowerCase();
-                if (texto.includes(input)) {
-                    op.style.display = "flex";
-                } else {
-                    op.style.display = "none";
-                }
-            });
-        }
-
-        // --- CARGA DE MÓDULOS Y VISTAS ---
-        document.addEventListener('DOMContentLoaded', () => {
-            const gridDiv = document.querySelector('#myGrid');
-            gridApi = agGrid.createGrid(gridDiv, {
-                columnDefs: configuracionColumnas.perfumes,
-                rowData: [],
-                pagination: true,
-                paginationPageSize: 15,
-                defaultColDef: { sortable: true, resizable: true }
-            });
-            cargarModulo('perfumes');
-        });
-
-        function cambiarTipoVista(tipo) {
-            vistaActual = tipo;
-            const tabTabla = document.getElementById('contenedor-tabla');
-            const tabCarrusel = document.getElementById('contenedor-carrusel');
-            const btnTabla = document.getElementById('btn-vista-tabla');
-            const btnCarrusel = document.getElementById('btn-vista-carrusel');
-
-            if (tipo === 'tabla') {
-                tabTabla.classList.remove('hidden');
-                tabCarrusel.classList.add('hidden');
-                btnTabla.className = "px-3 py-1 rounded text-xs font-bold bg-white text-slate-800 shadow-sm flex items-center space-x-1";
-                btnCarrusel.className = "px-3 py-1 rounded text-xs font-bold text-slate-500 hover:text-slate-800 flex items-center space-x-1";
-            } else {
-                tabTabla.classList.add('hidden');
-                tabCarrusel.classList.remove('hidden');
-                btnCarrusel.className = "px-3 py-1 rounded text-xs font-bold bg-white text-slate-800 shadow-sm flex items-center space-x-1";
-                btnTabla.className = "px-3 py-1 rounded text-xs font-bold text-slate-500 hover:text-slate-800 flex items-center space-x-1";
-                renderizarCarrusel(datosCargados);
-            }
-        }
-
-        async function cargarModulo(nombreModulo) {
-            moduloActual = nombreModulo;
-            const meta = titulosModulos[nombreModulo] || { titulo: nombreModulo, sub: "" };
-            document.getElementById('titulo-modulo').innerText = meta.titulo;
-            document.getElementById('subtitulo-modulo').innerText = meta.sub;
-
-            if (gridApi) {
-                gridApi.setGridOption('columnDefs', configuracionColumnas[nombreModulo]);
-                gridApi.showLoadingOverlay();
-            }
+            mostrarToast("loading", "Enviando transacción a /api/catalogos/perfumes...");
 
             try {
-                const response = await fetch(`/api/catalogos/${nombreModulo}`);
-                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
-                datosCargados = await response.json();
-                
-                gridApi.setGridOption('rowData', datosCargados);
-                if (vistaActual === 'carrusel') renderizarCarrusel(datosCargados);
+                const response = await fetch('/api/catalogos/perfumes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error(`HTTP Error Status: ${response.status}`);
+                const data = await response.json();
+
+                // 2. ESTADO: ÉXITO
+                btn.className = "w-full py-3 px-4 bg-emerald-600 text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-600/30 flex items-center justify-center space-x-2 transition-all";
+                btnIcon.innerHTML = `<i class="fa-solid fa-check text-lg"></i>`;
+                btnText.innerText = "¡Transacción Exitosa!";
+
+                mostrarToast("success", `Producto "${payload.nombre}" registrado en la BD`);
+                document.getElementById('form-transaccion').reset();
+
             } catch (error) {
-                console.error(`Error al cargar ${nombreModulo}:`, error);
-                datosCargados = [];
-                if (gridApi) gridApi.setGridOption('rowData', []);
+                // 3. ESTADO: ERROR (Efecto Shake)
+                card.classList.add('shake-animation');
+                setTimeout(() => card.classList.remove('shake-animation'), 400);
+
+                btn.className = "w-full py-3 px-4 bg-red-600 text-white font-bold text-sm rounded-xl shadow-lg shadow-red-600/30 flex items-center justify-center space-x-2 transition-all";
+                btnIcon.innerHTML = `<i class="fa-solid fa-xmark text-lg"></i>`;
+                btnText.innerText = "Error en Servidor";
+
+                mostrarToast("error", `Fallo en transacción: ${error.message}`);
+            } finally {
+                // Restaurar estado original del botón a los 2.5 segundos
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.className = "w-full relative py-3 px-4 bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 hover:from-pink-600 hover:to-rose-600 text-white font-bold text-sm rounded-xl shadow-lg shadow-pink-500/25 transition-all duration-300 flex items-center justify-center space-x-2 overflow-hidden";
+                    btnIcon.innerHTML = `<i class="fa-solid fa-paper-plane"></i>`;
+                    btnText.innerText = "Registrar Transacción";
+                }, 2500);
             }
         }
 
-        function renderizarCarrusel(datos) {
-            const wrapper = document.getElementById('swiper-wrapper-cards');
-            wrapper.innerHTML = '';
+        // SISTEMA DE NOTIFICACIONES TOAST (TIPO SONNER)
+        function mostrarToast(tipo, mensaje) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
 
-            if (!datos || datos.length === 0) {
-                wrapper.innerHTML = `<div class="p-8 text-center text-slate-400 w-full">Sin registros disponibles</div>`;
-                return;
+            let iconHTML = '<i class="fa-solid fa-circle-notch fa-spin text-pink-400"></i>';
+            let borderClass = 'border-pink-500/40';
+
+            if (tipo === 'success') {
+                iconHTML = '<i class="fa-solid fa-circle-check text-emerald-400 text-base"></i>';
+                borderClass = 'border-emerald-500/40';
+            } else if (tipo === 'error') {
+                iconHTML = '<i class="fa-solid fa-triangle-exclamation text-red-400 text-base"></i>';
+                borderClass = 'border-red-500/40';
             }
 
-            datos.forEach(item => {
-                let cardHTML = '';
-                if (moduloActual === 'perfumes') {
-                    cardHTML = `
-                        <div class="swiper-slide bg-white border border-gray-200 rounded-2xl p-4 shadow-md flex flex-col items-center">
-                            <div class="h-40 w-full flex items-center justify-center bg-gray-50 rounded-xl mb-3 overflow-hidden">
-                                <img src="${item.imagen_url || 'https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=300'}" class="h-32 object-contain hover:scale-105 transition-transform" />
-                            </div>
-                            <span class="text-[10px] font-bold tracking-wider text-pink-600 uppercase bg-pink-50 px-2 py-0.5 rounded-full mb-1">${item.marca || 'Perfume'}</span>
-                            <h3 class="font-bold text-slate-800 text-sm text-center line-clamp-1">${item.nombre}</h3>
-                            <p class="text-xs text-slate-500 mb-3">${item.concentracion || ''} · ${item.genero || ''}</p>
-                            <div class="mt-auto flex justify-between items-center w-full pt-2 border-t border-gray-100">
-                                <span class="text-base font-extrabold text-slate-800">$${item.precio_venta?.toFixed(2)}</span>
-                                <span class="text-xs ${item.stock < 10 ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-700'} px-2 py-0.5 rounded-full font-semibold">Stock: ${item.stock}</span>
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    const titulo = item.nombre || item.razon_social || item.cliente || item.proveedor || `Folio #${item.id_venta || item.id_compra}`;
-                    const subtitulo = item.pais_origen || item.email || item.fecha_venta || item.fecha_compra || item.siglas || '';
-                    const extra = item.total ? `$${item.total.toFixed(2)}` : (item.tipo || item.rfc || '');
+            toast.className = `toast-animate bg-slate-900/95 backdrop-blur-md text-slate-100 px-4 py-3 rounded-xl border ${borderClass} shadow-xl flex items-center space-x-3 text-xs max-w-xs`;
+            toast.innerHTML = `
+                <div>${iconHTML}</div>
+                <div class="flex-1 font-medium">${mensaje}</div>
+            `;
 
-                    cardHTML = `
-                        <div class="swiper-slide bg-gradient-to-br from-slate-800 to-slate-900 text-white rounded-2xl p-6 shadow-md flex flex-col justify-between h-52">
-                            <div>
-                                <i class="fa-solid fa-layer-group text-pink-500 text-2xl mb-2"></i>
-                                <h3 class="font-bold text-base leading-snug line-clamp-2">${titulo}</h3>
-                                <p class="text-xs text-slate-400 mt-1">${subtitulo}</p>
-                            </div>
-                            <div class="pt-3 border-t border-slate-700/60 flex justify-between items-center">
-                                <span class="text-xs text-pink-400 font-semibold">${moduloActual.toUpperCase()}</span>
-                                <span class="text-xs font-bold bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">${extra}</span>
-                            </div>
-                        </div>
-                    `;
-                }
-                wrapper.innerHTML += cardHTML;
-            });
+            container.appendChild(toast);
 
-            if (swiperInstance) swiperInstance.destroy();
-            swiperInstance = new Swiper('.mySwiper', {
-                slidesPerView: 1,
-                spaceBetween: 16,
-                pagination: { el: '.swiper-pagination', clickable: true },
-                navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
-                breakpoints: {
-                    640: { slidesPerView: 2 },
-                    768: { slidesPerView: 3 },
-                    1024: { slidesPerView: 4 }
-                }
-            });
+            // Desaparecer automáticamente
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(10px)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
         }
-
-        function recargarDatos() { cargarModulo(moduloActual); }
     </script>
 </body>
 </html>
