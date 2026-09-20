@@ -1,13 +1,34 @@
 use axum::{
     extract::{Path, State},
-    routing::get,
+    routing::{get, post},
     Json, Router,
 };
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use std::net::SocketAddr;
 use tower_http::services::{ServeDir, ServeFile};
+
+// Estructura para recibir el JSON de la transacción POST
+#[derive(Debug, Deserialize)]
+struct NuevoPerfumeInput {
+    sku: String,
+    nombre: String,
+    marca: String,
+    genero: Option<String>,
+    familia: Option<String>,
+    concentracion: Option<String>,
+    precio_costo: f64,
+    precio_venta: f64,
+    stock: i32,
+}
+
+#[derive(Serialize)]
+struct RespuestaTransaccion {
+    mensaje: String,
+    sku: String,
+}
 
 #[tokio::main]
 async fn main() {
@@ -21,9 +42,10 @@ async fn main() {
         .await
         .expect("No se pudo conectar a PostgreSQL");
 
-    // 2. Rutas Dinámicas de la API
+    // 2. Rutas Dinámicas de la API (Soporta GET y POST)
     let api_routes = Router::new()
-        .route("/catalogos/:tabla", get(obtener_catalogo));
+        .route("/catalogos/:tabla", get(obtener_catalogo))
+        .route("/catalogos/perfumes", post(crear_perfume));
 
     // 3. Router Principal y Archivos Estáticos
     let app = Router::new()
@@ -32,18 +54,47 @@ async fn main() {
         .route_service("/", ServeFile::new("public/index.html"))
         .with_state(pool);
 
-    // 4. Iniciar Servidor
+    // 4. Iniciar Servidor en 0.0.0.0 para Render
     let port_str = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
     let port: u16 = port_str.parse().expect("PORT invalido");
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
 
-    println!("Servidor ERP corriendo en http://localhost:{}", port);
+    println!("Servidor ERP corriendo en http://0.0.0.0:{}", port);
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }
 
-// Handler dinámico multicatálogo
+// Handler para recibir las transacciones POST e insertar perfumes
+async fn crear_perfume(
+    State(pool): State<PgPool>,
+    Json(payload): Json<NuevoPerfumeInput>,
+) -> Result<Json<RespuestaTransaccion>, String> {
+
+    // Inserción directa en la tabla de perfumes
+    let query = "
+        INSERT INTO perfumes (sku, nombre, genero, precio_costo, precio_venta, stock)
+        VALUES ($1, $2, $3, $4, $5, $6)
+    ";
+
+    sqlx::query(query)
+        .bind(&payload.sku)
+        .bind(&payload.nombre)
+        .bind(payload.genero.unwrap_or_else(|| "Unisex".to_string()))
+        .bind(payload.precio_costo)
+        .bind(payload.precio_venta)
+        .bind(payload.stock)
+        .execute(&pool)
+        .await
+        .map_err(|e| format!("Error al insertar en la BD: {}", e))?;
+
+    Ok(Json(RespuestaTransaccion {
+        mensaje: "Perfume registrado correctamente".to_string(),
+        sku: payload.sku,
+    }))
+}
+
+// Handler dinámico multicatálogo (GET)
 async fn obtener_catalogo(
     Path(tabla): Path<String>,
     State(pool): State<PgPool>,
@@ -76,7 +127,6 @@ async fn obtener_catalogo(
             ORDER BY p.nombre",
     };
 
-    // Usamos query_scalar para deserializar directamente el arreglo JSON de Postgres
     let sql = format!("SELECT COALESCE(json_agg(t), '[]'::json) FROM ({}) t", query);
 
     let resultado: Value = sqlx::query_scalar(&sql)
@@ -85,4 +135,4 @@ async fn obtener_catalogo(
         .map_err(|e| e.to_string())?;
 
     Ok(Json(resultado))
-} // Rebuild side menu 2
+} //qPd
