@@ -85,4 +85,4 @@ async fn obtener_catalogo(
         .map_err(|e| e.to_string())?;
 
     Ok(Json(resultado))
-} // Rebuild side menu
+} // Rebuild side menu 2
