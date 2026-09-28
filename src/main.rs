@@ -8,9 +8,9 @@ use serde_json::Value;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use std::net::SocketAddr;
+use std::time::Duration;
 use tower_http::services::{ServeDir, ServeFile};
 
-// Estructura para recibir el JSON de la transacción POST
 #[derive(Debug, Deserialize)]
 struct NuevoPerfumeInput {
     sku: String,
@@ -32,29 +32,27 @@ struct RespuestaTransaccion {
 
 #[tokio::main]
 async fn main() {
-    // 1. Conexión a Base de Datos
     let database_url = std::env::var("DATABASE_URL")
         .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ids_hello_db".to_string());
 
     let pool = PgPoolOptions::new()
         .max_connections(5)
+        .acquire_timeout(Duration::from_secs(300))
         .connect(&database_url)
         .await
         .expect("No se pudo conectar a PostgreSQL");
 
-    // 2. Rutas Dinámicas de la API (Soporta GET y POST)
     let api_routes = Router::new()
         .route("/catalogos/:tabla", get(obtener_catalogo))
-        .route("/catalogos/perfumes", post(crear_perfume));
+        .route("/catalogos/perfumes", post(crear_perfume))
+        .route("/seed", post(ejecutar_seed));
 
-    // 3. Router Principal y Archivos Estáticos
     let app = Router::new()
         .nest("/api", api_routes)
         .nest_service("/public", ServeDir::new("public"))
         .route_service("/", ServeFile::new("public/index.html"))
         .with_state(pool);
 
-    // 4. Iniciar Servidor en 0.0.0.0 para Render
     let port_str = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
     let port: u16 = port_str.parse().expect("PORT invalido");
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
@@ -65,13 +63,106 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-// Handler para recibir las transacciones POST e insertar perfumes
+// Handler de seed en segundo plano
+async fn ejecutar_seed(
+    State(pool): State<PgPool>,
+) -> Result<Json<Value>, String> {
+    println!("Recibida petición de carga masiva. Iniciando hilo en segundo plano...");
+
+    tokio::spawn(async move {
+        if let Err(e) = proceso_carga_masiva(pool).await {
+            eprintln!("Error durante la carga masiva en segundo plano: {}", e);
+        }
+    });
+
+    Ok(Json(serde_json::json!({
+        "status": "processing",
+        "mensaje": "Proceso de generación masiva iniciado en segundo plano. Puedes monitorear el avance en los Logs de Render."
+    })))
+}
+
+// Generación masiva mediante bloque anónimo PL/pgSQL
+async fn proceso_carga_masiva(pool: PgPool) -> Result<(), String> {
+    let mut conn = pool.acquire().await.map_err(|e| e.to_string())?;
+
+    println!("Iniciando inserción masiva de miles de registros en la base de datos...");
+
+    // Desactivar synchronous_commit para acelerar las inserciones masivas
+    sqlx::raw_sql("SET synchronous_commit = OFF;")
+        .execute(&mut *conn)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    // Script PL/pgSQL que genera transacciones reales de compras y ventas
+    let sql_masivo = r#"
+    DO $$
+    DECLARE
+        i INT;
+        v_id_compra INT;
+        v_id_venta INT;
+        v_metodos TEXT[] := ARRAY['Efectivo', 'Tarjeta', 'Transferencia'];
+    BEGIN
+        -- Generar 2,000 Encabezados y Detalles de Compras
+        FOR i IN 1..2000 LOOP
+            INSERT INTO compras_encabezado (id_proveedor, folio_factura, fecha_compra, total)
+            VALUES (
+                (1 + floor(random() * 2))::INT,
+                'FACT-2026-' || LPAD(i::text, 5, '0'),
+                NOW() - (random() * interval '365 days'),
+                0
+            ) RETURNING id_compra INTO v_id_compra;
+
+            INSERT INTO compras_detalle (id_compra, id_perfume, cantidad, precio_unitario, subtotal)
+            VALUES (
+                v_id_compra,
+                (1 + floor(random() * 5))::INT,
+                (10 + floor(random() * 50))::INT,
+                100.00,
+                2200.00
+            );
+        END LOOP;
+
+        -- Generar 10,000 Encabezados y Detalles de Ventas
+        FOR i IN 1..10000 LOOP
+            INSERT INTO ventas_encabezado (id_cliente, fecha_venta, metodo_pago, total)
+            VALUES (
+                (1 + floor(random() * 3))::INT,
+                NOW() - (random() * interval '180 days'),
+                v_metodos[1 + floor(random() * 3)::INT],
+                350.00
+            ) RETURNING id_venta INTO v_id_venta;
+
+            INSERT INTO ventas_detalle (id_venta, id_perfume, cantidad, precio_unitario, subtotal)
+            VALUES (
+                v_id_venta,
+                (1 + floor(random() * 5))::INT,
+                (1 + floor(random() * 3))::INT,
+                175.00,
+                350.00
+            );
+        END LOOP;
+    END $$;
+    "#;
+
+    sqlx::raw_sql(sql_masivo)
+        .execute(&mut *conn)
+        .await
+        .map_err(|e| format!("Error ejecutando la carga masiva: {}", e))?;
+
+    // Reactivar synchronous_commit
+    sqlx::raw_sql("SET synchronous_commit = ON;")
+        .execute(&mut *conn)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    println!("¡Generación masiva completada con éxito!");
+    Ok(())
+}
+
 async fn crear_perfume(
     State(pool): State<PgPool>,
     Json(payload): Json<NuevoPerfumeInput>,
 ) -> Result<Json<RespuestaTransaccion>, String> {
-
-    // Inserción directa en la tabla de perfumes
     let query = "
         INSERT INTO perfumes (sku, nombre, genero, precio_costo, precio_venta, stock)
         VALUES ($1, $2, $3, $4, $5, $6)
@@ -94,7 +185,6 @@ async fn crear_perfume(
     }))
 }
 
-// Handler dinámico multicatálogo (GET)
 async fn obtener_catalogo(
     Path(tabla): Path<String>,
     State(pool): State<PgPool>,
@@ -110,13 +200,13 @@ async fn obtener_catalogo(
                    v.fecha_venta, v.metodo_pago, v.total, v.estado 
             FROM ventas_encabezado v
             LEFT JOIN clientes c ON v.id_cliente = c.id_cliente
-            ORDER BY v.fecha_venta DESC",
+            ORDER BY v.fecha_venta DESC LIMIT 100",
         "compras" => "
             SELECT c.id_compra, p.razon_social as proveedor, c.folio_factura, 
                    c.fecha_compra, c.total, c.estado 
             FROM compras_encabezado c
             LEFT JOIN proveedores p ON c.id_proveedor = p.id_proveedor
-            ORDER BY c.fecha_compra DESC",
+            ORDER BY c.fecha_compra DESC LIMIT 100",
         _ => "
             SELECT p.sku, p.nombre, p.genero, p.precio_costo, p.precio_venta, p.stock,
                    m.nombre as marca, f.nombre as familia, c.nombre as concentracion
@@ -124,7 +214,7 @@ async fn obtener_catalogo(
             LEFT JOIN marcas m ON p.id_marca = m.id_marca
             LEFT JOIN familias_olfativas f ON p.id_familia = f.id_familia
             LEFT JOIN concentraciones c ON p.id_concentracion = c.id_concentracion
-            ORDER BY p.nombre",
+            ORDER BY p.nombre LIMIT 100",
     };
 
     let sql = format!("SELECT COALESCE(json_agg(t), '[]'::json) FROM ({}) t", query);
@@ -135,4 +225,4 @@ async fn obtener_catalogo(
         .map_err(|e| e.to_string())?;
 
     Ok(Json(resultado))
-} //qPd 
+}
