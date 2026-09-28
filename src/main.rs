@@ -63,7 +63,6 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-// Handler de seed en segundo plano
 async fn ejecutar_seed(
     State(pool): State<PgPool>,
 ) -> Result<Json<Value>, String> {
@@ -81,19 +80,15 @@ async fn ejecutar_seed(
     })))
 }
 
-// Generación masiva mediante bloque anónimo PL/pgSQL
 async fn proceso_carga_masiva(pool: PgPool) -> Result<(), String> {
-    let mut conn = pool.acquire().await.map_err(|e| e.to_string())?;
+    println!("Iniciando inserción masiva de registros en la base de datos...");
 
-    println!("Iniciando inserción masiva de miles de registros en la base de datos...");
-
-    // Desactivar synchronous_commit para acelerar las inserciones masivas
+    // Desactivar synchronous_commit para mayor velocidad pasando directamente &pool
     sqlx::raw_sql("SET synchronous_commit = OFF;")
-        .execute(&mut *conn)
+        .execute(&pool)
         .await
         .map_err(|e| e.to_string())?;
 
-    // Script PL/pgSQL que genera transacciones reales de compras y ventas
     let sql_masivo = r#"
     DO $$
     DECLARE
@@ -102,7 +97,7 @@ async fn proceso_carga_masiva(pool: PgPool) -> Result<(), String> {
         v_id_venta INT;
         v_metodos TEXT[] := ARRAY['Efectivo', 'Tarjeta', 'Transferencia'];
     BEGIN
-        -- Generar 2,000 Encabezados y Detalles de Compras
+        -- Generar 2,000 Compras
         FOR i IN 1..2000 LOOP
             INSERT INTO compras_encabezado (id_proveedor, folio_factura, fecha_compra, total)
             VALUES (
@@ -122,7 +117,7 @@ async fn proceso_carga_masiva(pool: PgPool) -> Result<(), String> {
             );
         END LOOP;
 
-        -- Generar 10,000 Encabezados y Detalles de Ventas
+        -- Generar 10,000 Ventas
         FOR i IN 1..10000 LOOP
             INSERT INTO ventas_encabezado (id_cliente, fecha_venta, metodo_pago, total)
             VALUES (
@@ -144,14 +139,15 @@ async fn proceso_carga_masiva(pool: PgPool) -> Result<(), String> {
     END $$;
     "#;
 
+    // Ejecutar la inserción masiva sobre el pool directamente
     sqlx::raw_sql(sql_masivo)
-        .execute(&mut *conn)
+        .execute(&pool)
         .await
         .map_err(|e| format!("Error ejecutando la carga masiva: {}", e))?;
 
     // Reactivar synchronous_commit
     sqlx::raw_sql("SET synchronous_commit = ON;")
-        .execute(&mut *conn)
+        .execute(&pool)
         .await
         .map_err(|e| e.to_string())?;
 
