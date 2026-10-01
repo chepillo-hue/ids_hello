@@ -36,7 +36,7 @@ async fn main() {
         .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ids_hello_db".to_string());
 
     let pool = PgPoolOptions::new()
-        .max_connections(5)
+        .max_connections(10)
         .acquire_timeout(Duration::from_secs(300))
         .connect(&database_url)
         .await
@@ -45,7 +45,9 @@ async fn main() {
     let api_routes = Router::new()
         .route("/catalogos/:tabla", get(obtener_catalogo))
         .route("/catalogos/perfumes", post(crear_perfume))
-        .route("/seed", post(ejecutar_seed));
+        .route("/seed", post(ejecutar_seed))
+        .route("/seed-millones", post(ejecutar_seed_millones))
+        .route("/conteo", get(obtener_conteo));
 
     let app = Router::new()
         .nest("/api", api_routes)
@@ -61,6 +63,82 @@ async fn main() {
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
+}
+
+// Endpoint para consultar cuántas ventas y compras existen guardadas
+async fn obtener_conteo(
+    State(pool): State<PgPool>,
+) -> Result<Json<Value>, String> {
+    let total_ventas: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ventas_encabezado")
+        .fetch_one(&pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let total_compras: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM compras_encabezado")
+        .fetch_one(&pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(Json(serde_json::json!({
+        "total_ventas": total_ventas.0,
+        "total_compras": total_compras.0
+    })))
+}
+
+// Endpoint para disparar 1 millón de registros
+async fn ejecutar_seed_millones(
+    State(pool): State<PgPool>,
+) -> Result<Json<Value>, String> {
+    println!("Iniciando generación de 1,000,000 de registros en segundo plano...");
+
+    tokio::spawn(async move {
+        if let Err(e) = proceso_carga_millones(pool).await {
+            eprintln!("Error durante la carga masiva en segundo plano: {}", e);
+        }
+    });
+
+    Ok(Json(serde_json::json!({
+        "status": "processing",
+        "mensaje": "Proceso de generación de 1,000,000 de registros iniciado en segundo plano. Monitorea los Logs en Render."
+    })))
+}
+
+async fn proceso_carga_millones(pool: PgPool) -> Result<(), String> {
+    println!("Desactivando synchronous_commit para optimizar velocidad...");
+    sqlx::raw_sql("SET synchronous_commit = OFF;")
+        .execute(&pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let lotes = 10;
+    let registros_por_lote = 100_000;
+
+    for lote in 1..=lotes {
+        println!("Insertando lote {}/{} ({} registros de ventas)...", lote, lotes, registros_por_lote);
+
+        let sql_lote = format!(r#"
+            INSERT INTO ventas_encabezado (id_cliente, fecha_venta, metodo_pago, total)
+            SELECT 
+                (1 + floor(random() * 3))::INT,
+                NOW() - (random() * interval '365 days'),
+                (ARRAY['Efectivo', 'Tarjeta', 'Transferencia'])[1 + floor(random() * 3)::INT],
+                (50 + (random() * 500))::NUMERIC(10,2)
+            FROM generate_series(1, {});
+        "#, registros_por_lote);
+
+        sqlx::raw_sql(&sql_lote)
+            .execute(&pool)
+            .await
+            .map_err(|e| format!("Error en el lote {}: {}", lote, e))?;
+    }
+
+    sqlx::raw_sql("SET synchronous_commit = ON;")
+        .execute(&pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    println!("¡Generación masiva de 1,000,000 de ventas completada con éxito!");
+    Ok(())
 }
 
 async fn ejecutar_seed(
@@ -83,7 +161,6 @@ async fn ejecutar_seed(
 async fn proceso_carga_masiva(pool: PgPool) -> Result<(), String> {
     println!("Iniciando inserción masiva de registros en la base de datos...");
 
-    // Desactivar synchronous_commit para mayor velocidad pasando directamente &pool
     sqlx::raw_sql("SET synchronous_commit = OFF;")
         .execute(&pool)
         .await
@@ -97,7 +174,6 @@ async fn proceso_carga_masiva(pool: PgPool) -> Result<(), String> {
         v_id_venta INT;
         v_metodos TEXT[] := ARRAY['Efectivo', 'Tarjeta', 'Transferencia'];
     BEGIN
-        -- Generar 2,000 Compras
         FOR i IN 1..2000 LOOP
             INSERT INTO compras_encabezado (id_proveedor, folio_factura, fecha_compra, total)
             VALUES (
@@ -117,7 +193,6 @@ async fn proceso_carga_masiva(pool: PgPool) -> Result<(), String> {
             );
         END LOOP;
 
-        -- Generar 10,000 Ventas
         FOR i IN 1..10000 LOOP
             INSERT INTO ventas_encabezado (id_cliente, fecha_venta, metodo_pago, total)
             VALUES (
@@ -139,13 +214,11 @@ async fn proceso_carga_masiva(pool: PgPool) -> Result<(), String> {
     END $$;
     "#;
 
-    // Ejecutar la inserción masiva sobre el pool directamente
     sqlx::raw_sql(sql_masivo)
         .execute(&pool)
         .await
         .map_err(|e| format!("Error ejecutando la carga masiva: {}", e))?;
 
-    // Reactivar synchronous_commit
     sqlx::raw_sql("SET synchronous_commit = ON;")
         .execute(&pool)
         .await
