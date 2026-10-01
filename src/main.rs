@@ -11,6 +11,7 @@ use std::net::SocketAddr;
 use std::time::Duration;
 use tower_http::services::{ServeDir, ServeFile};
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct NuevoPerfumeInput {
     sku: String,
@@ -42,12 +43,13 @@ async fn main() {
         .await
         .expect("No se pudo conectar a PostgreSQL");
 
+    // ORDEN DE RUTAS: Rutas exactas primero, rutas dinámicas con parámetros al final
     let api_routes = Router::new()
-        .route("/catalogos/:tabla", get(obtener_catalogo))
-        .route("/catalogos/perfumes", post(crear_perfume))
-        .route("/seed", post(ejecutar_seed))
+        .route("/conteo", get(obtener_conteo))
         .route("/seed-millones", post(ejecutar_seed_millones))
-        .route("/conteo", get(obtener_conteo));
+        .route("/seed", post(ejecutar_seed))
+        .route("/catalogos/perfumes", post(crear_perfume))
+        .route("/catalogos/:tabla", get(obtener_catalogo));
 
     let app = Router::new()
         .nest("/api", api_routes)
@@ -121,7 +123,11 @@ async fn proceso_carga_millones(pool: PgPool) -> Result<(), String> {
             SELECT 
                 (1 + floor(random() * 3))::INT,
                 NOW() - (random() * interval '365 days'),
-                (ARRAY['Efectivo', 'Tarjeta', 'Transferencia'])[1 + floor(random() * 3)::INT],
+                CASE floor(random() * 3)::INT 
+                    WHEN 0 THEN 'Efectivo' 
+                    WHEN 1 THEN 'Tarjeta' 
+                    ELSE 'Transferencia' 
+                END,
                 (50 + (random() * 500))::NUMERIC(10,2)
             FROM generate_series(1, {});
         "#, registros_por_lote);
